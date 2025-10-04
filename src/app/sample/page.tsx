@@ -1,6 +1,9 @@
 "use client";
 
 /* Johnny Nguyen - used AI to help style the page. typed it out manually.*/
+
+import DatesFromLocal from "./DatesFromLocal";
+
 export default function ProfilePage() {
   const sampleDates = [
     {
@@ -43,6 +46,9 @@ export default function ProfilePage() {
         </h1>
         <p className="text-gray-600 mt-1">"Keeping an eye out for Selener."</p>
       </div>
+
+      {/* ADDED (A3): render any dates saved in localStorage above the sample cards */}
+      <DatesFromLocal />
 
       {/* grid polaroid style */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-5xl">
