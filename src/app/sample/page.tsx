@@ -9,7 +9,7 @@ export default function ProfilePage() {
     {
       id: 1,
       title: "Beach Dinner",
-      caption: "Our first sunset together by the ocean",
+      caption: "Dinner by the ocean! Yummy.",
       image:
         "https://as2.ftcdn.net/jpg/00/73/88/49/1000_F_73884907_3uxGgsKUKkPRku8rfwj30kyFsGV12Khv.jpg",
       rotate: "-rotate-3",
@@ -25,7 +25,7 @@ export default function ProfilePage() {
     {
       id: 3,
       title: "Carnival Night",
-      caption: "Won a teddy bear and laughed all evening",
+      caption: "Almost puked. 10/10",
       image:
         "https://i.pinimg.com/736x/4e/7a/0d/4e7a0d43937c5853abe38e3e0eade73a.jpg",
       rotate: "-rotate-1",
