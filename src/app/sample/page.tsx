@@ -1,8 +1,12 @@
 "use client";
+import { Link } from "react-router-dom";
+import { useRouter } from "next/navigation";
+
+
 
 /* Johnny Nguyen - used AI to help style the page. typed it out manually.*/
 
-import DatesFromLocal from "./DatesFromLocal";
+// import DatesFromLocal from "./DatesFromLocal";
 
 export default function ProfilePage() {
   const sampleDates = [
@@ -34,6 +38,13 @@ export default function ProfilePage() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-pink-100 via-rose-100 to-rose-200 flex flex-col items-center py-10 px-4">
+    <div className= "navbar">
+      <ul>
+        <li><a href="/login">Home</a> </li>
+        <li><a href="/profile"> Profile</a> </li>
+        <li><a href="/settings">Setting</a> </li>
+      </ul>
+    </div>
       {/* header */}
       <div className="bg-white/80 backdrop-blur-md shadow-lg p-6 w-full max-w-2xl text-center mb-10">
         <img
@@ -48,7 +59,7 @@ export default function ProfilePage() {
       </div>
 
       {/* ADDED (A3): render any dates saved in localStorage above the sample cards */}
-      <DatesFromLocal />
+       {/* <DatesFromLocal /> */}
 
       {/* grid polaroid style */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-5xl">
