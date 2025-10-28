@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import BackButton from "@/components/nav/BackButton";
 
 export default function SignupPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
 
     const [step, setStep] = useState<1 | 2>(1);
 
@@ -17,6 +20,7 @@ export default function SignupPage() {
     const [partnerUsername, setPartnerUsername] = useState("");
 
     const [error, setError] = useState("");
+    const [submitting, setSubmitting] = useState(false);
 
     const handleNext = () => {
         setError("");
@@ -29,6 +33,8 @@ export default function SignupPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (submitting) return;
+        setSubmitting(true);
         setError("");
 
         try {
@@ -47,14 +53,26 @@ export default function SignupPage() {
 
             if (!res.ok) {
                 setError(data.error || "Signup failed");
+                setSubmitting(false);
                 return;
             }
 
-            localStorage.setItem("user", JSON.stringify(data));
-            router.push("/profile");
+            if (data?.token) localStorage.setItem("token", data.token);
+            if (data?.id) localStorage.setItem("userId", String(data.id));
+            if (!data?.token && !data?.id) {
+                localStorage.setItem("user", JSON.stringify(data));
+            }
+
+            document.cookie = "auth=1; Path=/; Max-Age=2592000; SameSite=Lax";
+
+            window.dispatchEvent(new Event("authchange"));
+
+            const next = searchParams?.get("next") || "/profile";
+            router.replace(next);
         } catch (err) {
             console.error(err);
             setError("Server error. Try again later.");
+            setSubmitting(false);
         }
     };
 
@@ -65,31 +83,64 @@ export default function SignupPage() {
                     Create Account
                 </h1>
                 <p className="text-center text-gray-600 mb-6">
-                    {step === 1 ? "Start capturing your memories today." : "Tell us about your partner."}
+                    {step === 1
+                        ? "Start capturing your memories today."
+                        : "Tell us about your partner."}
                 </p>
 
                 {step === 1 && (
-                    <form onSubmit={(e) => { e.preventDefault(); handleNext(); }} className="flex flex-col space-y-4">
-                        <input type="text" placeholder="Username" value={username}
-                               onChange={(e) => setUsername(e.target.value)} required
-                               className="p-3 rounded-lg border border-rose-200 focus:ring-2 focus:ring-rose-400 outline-none text-black"/>
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            handleNext();
+                        }}
+                        className="flex flex-col space-y-4"
+                    >
+                        <input
+                            type="text"
+                            placeholder="Username"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            required
+                            className="p-3 rounded-lg border border-rose-200 focus:ring-2 focus:ring-rose-400 outline-none text-black"
+                        />
 
-                        <input type="email" placeholder="Email" value={email}
-                               onChange={(e) => setEmail(e.target.value)} required
-                               className="p-3 rounded-lg border border-rose-200 focus:ring-2 focus:ring-rose-400 outline-none text-black"/>
+                        <input
+                            type="email"
+                            placeholder="Email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            className="p-3 rounded-lg border border-rose-200 focus:ring-2 focus:ring-rose-400 outline-none text-black"
+                            autoComplete="email"
+                        />
 
-                        <input type="password" placeholder="Password" value={password}
-                               onChange={(e) => setPassword(e.target.value)} required
-                               className="p-3 rounded-lg border border-rose-200 focus:ring-2 focus:ring-rose-400 outline-none text-black"/>
+                        <input
+                            type="password"
+                            placeholder="Password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            className="p-3 rounded-lg border border-rose-200 focus:ring-2 focus:ring-rose-400 outline-none text-black"
+                            autoComplete="new-password"
+                        />
 
-                        <input type="password" placeholder="Confirm Password" value={confirmPassword}
-                               onChange={(e) => setConfirmPassword(e.target.value)} required
-                               className="p-3 rounded-lg border border-rose-200 focus:ring-2 focus:ring-rose-400 outline-none text-black"/>
+                        <input
+                            type="password"
+                            placeholder="Confirm Password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            required
+                            className="p-3 rounded-lg border border-rose-200 focus:ring-2 focus:ring-rose-400 outline-none text-black"
+                            autoComplete="new-password"
+                        />
 
                         {error && <p className="text-red-500 text-sm">{error}</p>}
 
-                        <button type="submit"
-                                className="bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 rounded-lg transition">
+                        <button
+                            type="submit"
+                            className="bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 rounded-lg transition"
+                        >
                             Continue
                         </button>
                     </form>
@@ -97,43 +148,60 @@ export default function SignupPage() {
 
                 {step === 2 && (
                     <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
-
                         <div className="text-gray-700">Do you have a partner?</div>
                         <div className="flex gap-3">
-                            <button type="button"
-                                    onClick={() => setHasPartner(false)}
-                                    className={`flex-1 py-2 rounded-lg border ${hasPartner === false ? "bg-rose-500 text-white":"bg-white"}`}>
+                            <button
+                                type="button"
+                                onClick={() => setHasPartner(false)}
+                                className={`flex-1 py-2 rounded-lg border ${
+                                    hasPartner === false ? "bg-rose-500 text-white" : "bg-white"
+                                }`}
+                            >
                                 No
                             </button>
-                            <button type="button"
-                                    onClick={() => setHasPartner(true)}
-                                    className={`flex-1 py-2 rounded-lg border ${hasPartner === true ? "bg-rose-500 text-white":"bg-white"}`}>
+                            <button
+                                type="button"
+                                onClick={() => setHasPartner(true)}
+                                className={`flex-1 py-2 rounded-lg border ${
+                                    hasPartner === true ? "bg-rose-500 text-white" : "bg-white"
+                                }`}
+                            >
                                 Yes
                             </button>
                         </div>
 
                         {hasPartner && (
-                            <input type="text" placeholder="Partner's Username"
-                                   value={partnerUsername}
-                                   onChange={(e) => setPartnerUsername(e.target.value)}
-                                   required
-                                   className="p-3 rounded-lg border border-rose-200 focus:ring-2 focus:ring-rose-400 outline-none text-black" />
+                            <input
+                                type="text"
+                                placeholder="Partner's Username"
+                                value={partnerUsername}
+                                onChange={(e) => setPartnerUsername(e.target.value)}
+                                required
+                                className="p-3 rounded-lg border border-rose-200 focus:ring-2 focus:ring-rose-400 outline-none text-black"
+                            />
                         )}
 
                         {error && <p className="text-red-500 text-sm">{error}</p>}
 
-                        <button type="submit"
-                                className="bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 rounded-lg transition">
-                            Sign Up
+                        <button
+                            type="submit"
+                            disabled={submitting}
+                            className="bg-rose-500 hover:bg-rose-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-2 rounded-lg transition"
+                        >
+                            {submitting ? "Creating..." : "Sign Up"}
                         </button>
 
-                        <button type="button"
-                                onClick={() => setStep(1)}
-                                className="text-gray-500 underline text-sm">
-                            Go Back
-                        </button>
+                        <BackButton className="text-gray-500 underline text-sm">Back</BackButton>
                     </form>
                 )}
+
+                {/* Login hint */}
+                <p className="text-sm text-center mt-4 text-gray-600">
+                    Already have an account?{" "}
+                    <Link href="/login" className="text-rose-600 hover:underline">
+                        Log in
+                    </Link>
+                </p>
             </div>
         </main>
     );
