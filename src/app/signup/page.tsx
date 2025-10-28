@@ -21,9 +21,11 @@ export default function SignupPage() {
 
     const [error, setError] = useState("");
     const [submitting, setSubmitting] = useState(false);
+    const [info, setInfo] = useState("");
 
     const handleNext = () => {
         setError("");
+        setInfo("");
         if (password !== confirmPassword) {
             setError("Passwords do not match");
             return;
@@ -36,6 +38,7 @@ export default function SignupPage() {
         if (submitting) return;
         setSubmitting(true);
         setError("");
+        setInfo("");
 
         try {
             const res = await fetch("/api/auth/signup", {
@@ -45,7 +48,7 @@ export default function SignupPage() {
                     username,
                     email,
                     password,
-                    partnerUsername: hasPartner ? partnerUsername : null,
+                    partnerUsername: hasPartner ? partnerUsername.trim() : null,
                 }),
             });
 
@@ -63,8 +66,9 @@ export default function SignupPage() {
                 localStorage.setItem("user", JSON.stringify(data));
             }
 
-            document.cookie = "auth=1; Path=/; Max-Age=2592000; SameSite=Lax";
+            if (data?.note) setInfo(data.note);
 
+            document.cookie = "auth=1; Path=/; Max-Age=2592000; SameSite=Lax";
             window.dispatchEvent(new Event("authchange"));
 
             const next = searchParams?.get("next") || "/profile";
@@ -171,17 +175,24 @@ export default function SignupPage() {
                         </div>
 
                         {hasPartner && (
-                            <input
-                                type="text"
-                                placeholder="Partner's Username"
-                                value={partnerUsername}
-                                onChange={(e) => setPartnerUsername(e.target.value)}
-                                required
-                                className="p-3 rounded-lg border border-rose-200 focus:ring-2 focus:ring-rose-400 outline-none text-black"
-                            />
+                            <div className="space-y-1">
+                                <input
+                                    type="text"
+                                    placeholder="Partner's Username (optional)"
+                                    value={partnerUsername}
+                                    onChange={(e) => setPartnerUsername(e.target.value)}
+                                    // ⬇️ Not required — they can link later even if they chose "Yes"
+                                    className="p-3 rounded-lg border border-rose-200 focus:ring-2 focus:ring-rose-400 outline-none text-black"
+                                />
+                                <p className="text-xs text-gray-500">
+                                    If your partner hasn’t signed up yet, leave this blank — you can
+                                    link them later from your profile.
+                                </p>
+                            </div>
                         )}
 
                         {error && <p className="text-red-500 text-sm">{error}</p>}
+                        {info && <p className="text-rose-600 text-sm">{info}</p>}
 
                         <button
                             type="submit"
@@ -195,7 +206,6 @@ export default function SignupPage() {
                     </form>
                 )}
 
-                {/* Login hint */}
                 <p className="text-sm text-center mt-4 text-gray-600">
                     Already have an account?{" "}
                     <Link href="/login" className="text-rose-600 hover:underline">
