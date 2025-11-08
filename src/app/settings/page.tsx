@@ -60,33 +60,36 @@ export default function SettingsPage() {
                         Pick how we nudge you about upcoming dates, uploads, or partner activity.
                     </p>
                     <ul className="space-y-3">
-                        {[
-                            { key: "email", label: "Email reminders" as const, detail: "Weekly wrap-ups and important alerts." },
-                            { key: "sms", label: "Text messages" as const, detail: "Last-minute date reminders straight to your phone." },
-                            { key: "push", label: "Push notifications" as const, detail: "Instant updates in the browser or app." },
-                            { key: "digest", label: "Monthly digest" as const, detail: "A highlight reel every month." },
-                        ].map(({ key, label, detail }) => (
-                            <li key={key} className="flex items-center justify-between rounded-xl border border-rose-100 px-4 py-3">
-                                <div>
-                                    <p className="font-medium text-gray-800">{label}</p>
-                                    <p className="text-sm text-gray-500">{detail}</p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => toggle(key)}
-                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-                                        toggles[key as ToggleKey] ? "bg-rose-500" : "bg-gray-300"
-                                    }`}
-                                    aria-pressed={toggles[key as ToggleKey]}
-                                >
-                                    <span
-                                        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
-                                            toggles[key as ToggleKey] ? "translate-x-5" : "translate-x-1"
+                        {(() => {
+                            const NOTIFICATION_OPTIONS: { key: ToggleKey; label: string; detail: string }[] = [
+                                { key: "email", label: "Email reminders", detail: "Weekly wrap-ups and important alerts." },
+                                { key: "sms", label: "Text messages", detail: "Last-minute date reminders straight to your phone." },
+                                { key: "push", label: "Push notifications", detail: "Instant updates in the browser or app." },
+                                { key: "digest", label: "Monthly digest", detail: "A highlight reel every month." },
+                            ];
+                            return NOTIFICATION_OPTIONS.map(({ key, label, detail }) => (
+                                <li key={key} className="flex items-center justify-between rounded-xl border border-rose-100 px-4 py-3">
+                                    <div>
+                                        <p className="font-medium text-gray-800">{label}</p>
+                                        <p className="text-sm text-gray-500">{detail}</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => toggle(key)}
+                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+                                            toggles[key] ? "bg-rose-500" : "bg-gray-300"
                                         }`}
-                                    />
-                                </button>
-                            </li>
-                        ))}
+                                        aria-pressed={toggles[key]}
+                                    >
+                                        <span
+                                            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+                                                toggles[key] ? "translate-x-5" : "translate-x-1"
+                                            }`}
+                                        />
+                                    </button>
+                                </li>
+                            ));
+                        })()}
                     </ul>
                 </section>
 
