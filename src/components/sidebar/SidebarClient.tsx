@@ -18,7 +18,7 @@ const NAV_SECTIONS: { title?: string; items: Item[] }[] = [
     {
         items: [
             { label: "Dashboard", href: "/dashboard" },
-            { label: "Create Date", href: "/dates/create" },
+            { label: "Create Date", href: "/create-date" },
         ],
     },
     {
@@ -121,7 +121,11 @@ export default function SidebarClient({ counts }: { counts?: NavCounts }) {
                 )}
             >
                 <div className="p-4 pt-12">
-                    <Link href="/" className="block text-xl font-bold tracking-tight truncate" title="Date Photo Book">
+                    <Link
+                        href="/"
+                        className="block text-xl font-bold tracking-tight truncate text-rose-600"
+                        title="Date Photo Book"
+                    >
                         Date Photo Book
                     </Link>
                     <p className="text-sm text-gray-500">Capture every date.</p>
