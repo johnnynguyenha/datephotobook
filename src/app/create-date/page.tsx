@@ -15,11 +15,15 @@ export default function CreateDatePage() {
         date_time: "",
         location: "",
         privacy: "PUBLIC" as Privacy,
-        image: "",
     });
 
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [submitting, setSubmitting] = useState(false);
+
     function handleChange(
-        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+        e: React.ChangeEvent<
+            HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+        >
     ) {
         const { name, value } = e.target;
         setForm((f) => ({ ...f, [name]: value }));
@@ -28,34 +32,66 @@ export default function CreateDatePage() {
     function handleImageFile(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
         if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = () => setForm((f) => ({ ...f, image: String(reader.result) }));
-        reader.readAsDataURL(file);
+        setImageFile(file);
     }
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
+        if (submitting) return;
+        setSubmitting(true);
 
-        if (!form.image) {
+        if (!imageFile) {
             alert("Please upload an image.");
+            setSubmitting(false);
+            return;
+        }
+
+        // 👇 Get the logged-in user from localStorage
+        let userId: string | null = null;
+        if (typeof window !== "undefined") {
+            // try several possible keys just in case
+            userId =
+                localStorage.getItem("userId") ||
+                localStorage.getItem("id") ||
+                null;
+        }
+
+        console.log("CreateDatePage userId from localStorage:", userId);
+
+        if (!userId) {
+            alert("You must be logged in to create a date (userId missing).");
+            setSubmitting(false);
             return;
         }
 
         try {
-            await fetch("/api/dates", {
+            const fd = new FormData();
+            fd.append("title", form.title);
+            fd.append("description", form.description);
+            fd.append("date_time", form.date_time); // e.g. 2025-11-22T20:31
+            fd.append("location", form.location);
+            fd.append("privacy", form.privacy);
+            fd.append("user_id", userId); // 👈 IMPORTANT
+            fd.append("image", imageFile);
+
+            const res = await fetch("/api/dates", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    ...form,
-                    profile_id: "your-profile-id",
-                }),
+                body: fd, // ❗ no manual Content-Type
             });
+
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                console.error("Error creating date:", data);
+                alert(data.error || "Failed to create date.");
+                setSubmitting(false);
+                return;
+            }
 
             router.push("/profile");
         } catch (error) {
             console.error(error);
             alert("Failed to create date.");
+            setSubmitting(false);
         }
     }
 
@@ -86,7 +122,9 @@ export default function CreateDatePage() {
                     </label>
 
                     <label className="grid gap-1">
-                        <span className="text-sm font-medium text-gray-700">Description</span>
+            <span className="text-sm font-medium text-gray-700">
+              Description
+            </span>
                         <textarea
                             name="description"
                             value={form.description}
@@ -98,7 +136,9 @@ export default function CreateDatePage() {
                     </label>
 
                     <label className="grid gap-1">
-                        <span className="text-sm font-medium text-gray-700">Upload Image</span>
+            <span className="text-sm font-medium text-gray-700">
+              Upload Image
+            </span>
                         <input
                             type="file"
                             accept="image/*"
@@ -106,22 +146,29 @@ export default function CreateDatePage() {
                             className="block w-full text-gray-800 file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-rose-600 file:text-white hover:file:bg-rose-700"
                             required
                         />
-                        {form.image && <span className="text-xs text-gray-600">Image selected ✓</span>}
+                        {imageFile && (
+                            <span className="text-xs text-gray-600">Image selected ✓</span>
+                        )}
                     </label>
 
                     <div className="grid sm:grid-cols-2 gap-4">
                         <label className="grid gap-1">
-                            <span className="text-sm font-medium text-gray-700">Date & Time</span>
+              <span className="text-sm font-medium text-gray-700">
+                Date & Time
+              </span>
                             <input
                                 type="datetime-local"
                                 name="date_time"
                                 value={form.date_time}
                                 onChange={handleChange}
                                 className={inputBase}
+                                required
                             />
                         </label>
                         <label className="grid gap-1">
-                            <span className="text-sm font-medium text-gray-700">Location</span>
+              <span className="text-sm font-medium text-gray-700">
+                Location
+              </span>
                             <input
                                 name="location"
                                 value={form.location}
@@ -147,9 +194,10 @@ export default function CreateDatePage() {
 
                     <button
                         type="submit"
-                        className="mt-2 rounded-md bg-rose-600 text-white px-4 py-2 font-semibold shadow hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-400"
+                        disabled={submitting}
+                        className="mt-2 rounded-md bg-rose-600 text-white px-4 py-2 font-semibold shadow hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-400 disabled:opacity-60"
                     >
-                        Save Date
+                        {submitting ? "Saving..." : "Save Date"}
                     </button>
                 </form>
             </div>

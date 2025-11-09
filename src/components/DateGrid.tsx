@@ -1,76 +1,143 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 
-type Privacy = "PUBLIC" | "PRIVATE";
+type Privacy = "PUBLIC" | "PRIVATE" | "INHERIT";
 
-export type DateItem = {
+type DateItem = {
     date_id: string;
-    title: string;
-    description?: string;
-    image: string;
-    date_time?: string;
-    location?: string;
-    privacy?: Privacy;
+    title: string | null;
+    description: string | null;
+    date_time: string;
+    location: string | null;
+    privacy: Privacy;
+    image_path?: string | null;
+    user_id?: string;
 };
 
 export default function DateGrid() {
-    const [items, setItems] = useState<DateItem[]>([]);
+    const [dates, setDates] = useState<DateItem[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        fetch("/api/dates")
-            .then(res => res.json())
-            .then(setItems)
-            .catch(() => setItems([]));
+        let isMounted = true;
+
+        async function load() {
+            try {
+                setLoading(true);
+                setError(null);
+
+                let userId: string | null = null;
+                if (typeof window !== "undefined") {
+                    userId = localStorage.getItem("userId");
+                }
+
+                const url = userId
+                    ? `/api/dates?user_id=${encodeURIComponent(userId)}`
+                    : "/api/dates";
+
+                const res = await fetch(url);
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || "Failed to load dates");
+                }
+
+                if (isMounted) setDates(data);
+            } catch (err: any) {
+                console.error(err);
+                if (isMounted) setError(err.message || "Failed to load dates");
+            } finally {
+                if (isMounted) setLoading(false);
+            }
+        }
+
+        load();
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
-    if (items.length === 0)
-        return <p className="text-center text-gray-500 mt-6">No dates yet.</p>;
+    if (loading) {
+        return <p className="text-gray-600 mt-4">Loading dates...</p>;
+    }
+
+    if (error) {
+        return <p className="text-red-500 mt-4">{error}</p>;
+    }
+
+    if (!dates.length) {
+        return <p className="text-gray-600 mt-4">No dates yet.</p>;
+    }
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-5xl">
-            {items.map((d) => (
-                    <Link
+        <section className="w-full max-w-5xl grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {dates.map((d) => {
+                // Raw value from DB
+                const raw = d.image_path?.toString().trim();
+
+                // Decide initial src:
+                // - If raw is null/empty/"null"/"undefined" -> use heart
+                // - Else, normalize it to start with /images
+                let imageSrc = "/images/heart.jpg";
+                if (raw && raw !== "null" && raw !== "undefined") {
+                    imageSrc = raw.startsWith("/")
+                        ? raw
+                        : `/images/${raw}`;
+                }
+
+                return (
+                    <article
                         key={d.date_id}
-                href={`/dates/${d.date_id}`}
-    className="group bg-white rounded-xl shadow-xl overflow-hidden hover:shadow-2xl transition transform hover:-translate-y-2 p-4 flex flex-col items-center"
-    >
-    <div className="bg-white p-2 rounded-lg shadow-inner w-full">
-    <img
-        src={d.image}
-    alt={d.title}
-    className="w-full h-60 object-cover rounded-md"
-        />
-        </div>
-        <div className="mt-3 text-center">
-    <h2 className="text-md font-semibold text-rose-600">{d.title}</h2>
-    {d.description && (
-        <p className="text-sm text-gray-600 italic">"{d.description}"</p>
-    )}
-    <dl className="text-xs text-gray-600 mt-1">
-        {d.date_time && (
-                <div>
-                    <dt>When:</dt>
-    <dd>{new Date(d.date_time).toLocaleString()}</dd>
-    </div>
-)}
-    {d.location && (
-        <div>
-            <dt>Location:</dt>
-    <dd>{d.location}</dd>
-    </div>
-    )}
-    {d.privacy && (
-        <div>
-            <dt>Privacy:</dt>
-    <dd>{d.privacy}</dd>
-    </div>
-    )}
-    </dl>
-    </div>
-    </Link>
-))}
-    </div>
-);
+                        className="bg-white/80 rounded-xl shadow hover:shadow-lg transition p-4 flex flex-col overflow-hidden"
+                    >
+                        <div className="relative w-full h-48 mb-3 overflow-hidden rounded-lg">
+                            <img
+                                src={imageSrc}
+                                alt={d.title || "Date image"}
+                                className="object-cover w-full h-full"
+                                onError={(e) => {
+                                    // If the src is bad for any reason, swap to heart.jpg
+                                    const img = e.currentTarget;
+                                    if (!img.src.endsWith("/images/heart.jpg")) {
+                                        img.src = "/images/heart.jpg";
+                                    }
+                                }}
+                            />
+                        </div>
+
+                        <h2 className="font-semibold text-rose-700 truncate">
+                            {d.title || "Untitled date"}
+                        </h2>
+
+                        <p className="text-xs text-gray-500 mb-1">
+                            {new Date(d.date_time).toLocaleString()}
+                        </p>
+
+                        {d.location && (
+                            <p className="text-sm text-gray-700 mb-1">📍 {d.location}</p>
+                        )}
+
+                        {d.description && (
+                            <p className="text-sm text-gray-600 line-clamp-3 mb-2">
+                                {d.description}
+                            </p>
+                        )}
+
+                        <span
+                            className={`mt-auto inline-flex items-center text-xs px-2 py-1 rounded-full ${
+                                d.privacy === "PRIVATE"
+                                    ? "bg-gray-100 text-gray-600"
+                                    : "bg-rose-50 text-rose-500"
+                            }`}
+                        >
+              {d.privacy === "PRIVATE" ? "Private" : "Public"}
+            </span>
+                    </article>
+                );
+            })}
+        </section>
+    );
 }

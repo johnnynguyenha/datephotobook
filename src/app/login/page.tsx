@@ -34,15 +34,18 @@ export default function LoginPage() {
                 return;
             }
 
-            localStorage.setItem("token", data.token);
-            localStorage.setItem("userId", data.id);
+            localStorage.setItem("token", "logged-in");
+            localStorage.setItem("userId", data.user_id);
+            localStorage.setItem(
+                "user",
+                JSON.stringify({ user_id: data.user_id, username: data.username })
+            );
 
-            document.cookie = "auth=1; Path=/; Max-Age=2592000; SameSite=Lax";
-
+            document.cookie =
+                "auth=1; Path=/; Max-Age=2592000; SameSite=Lax";
             window.dispatchEvent(new Event("authchange"));
 
             const next = searchParams?.get("next") || "/profile";
-
             router.replace(next);
         } catch (err) {
             console.error(err);
@@ -50,6 +53,7 @@ export default function LoginPage() {
             setSubmitting(false);
         }
     };
+
 
     return (
         <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-100 via-rose-100 to-rose-200">
