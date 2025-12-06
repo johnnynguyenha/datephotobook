@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fef7f7;
+  --foreground: #2d1b1e;
 }
 
 @theme inline {
@@ -14,50 +14,102 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #1a0f12;
+    --foreground: #fef7f7;
   }
+}
+
+* {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.navbar {
-  background-color: transparent;
-  color: #0a0a0a;
-  height: 100%;
-  z-index: 1;
-  position: fixed;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  height: auto;
-  text-align: center;
-}
-.navbar ul { 
-  list-style-type: none;
-  margin: 0;
-  padding: 1.5rem;
-  overflow: hidden;
-  gap: 10px;
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
 }
 
-.navbar li {
-  background-color: #ffd6d6;
-  color: #000000;
-  height: 100%;
-  width: 100%;
-  border-radius: 8px;
-  padding: 1.3rem 0.5rem;
-  margin: 2rem 0;
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-.navbar li:hover {
-  background-color: #1f2937; /* Tailwind's gray-800 */
-  color: #f3f4f6; /* Tailwind's gray-100 */
-  cursor: pointer;
+::-webkit-scrollbar-track {
+  background: rgba(255, 228, 230, 0.3);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(251, 146, 160, 0.5);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(251, 146, 160, 0.7);
+}
+
+/* Cute animations */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(251, 146, 160, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(251, 146, 160, 0.5);
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
+
+/* Glassmorphism effect */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid rgba(255, 228, 230, 0.5);
+}
+
+.glass-strong {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 228, 230, 0.6);
 }
 

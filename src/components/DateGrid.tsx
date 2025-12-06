@@ -74,7 +74,7 @@ export default function DateGrid() {
 
     return (
         <section className="w-full max-w-5xl grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {dates.map((d) => {
+            {dates.map((d, index) => {
                 const raw = d.image_path?.toString().trim();
                 let imageSrc = "/images/heart.jpg";
                 if (raw && raw !== "null" && raw !== "undefined") {
@@ -86,13 +86,14 @@ export default function DateGrid() {
                 return (
                     <article
                         key={d.date_id}
-                        className="bg-white/80 rounded-xl shadow hover:shadow-lg transition p-4 flex flex-col overflow-hidden"
+                        className="glass-strong rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-5 flex flex-col overflow-hidden hover:scale-[1.02] animate-slide-in"
+                        style={{ animationDelay: `${index * 100}ms` }}
                     >
-                        <div className="relative w-full h-48 mb-3 overflow-hidden rounded-lg">
+                        <div className="relative w-full h-52 mb-4 overflow-hidden rounded-xl group">
                             <img
                                 src={imageSrc}
                                 alt={d.title || "Date image"}
-                                className="object-cover w-full h-full"
+                                className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-110"
                                 onError={(e) => {
                                     const img = e.currentTarget;
                                     if (!img.src.endsWith("/images/heart.jpg")) {
@@ -100,35 +101,39 @@ export default function DateGrid() {
                                     }
                                 }}
                             />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                         </div>
 
-                        <h2 className="font-semibold text-rose-700 truncate">
+                        <h2 className="font-bold text-rose-700 truncate text-lg mb-2">
                             {d.title || "Untitled date"}
                         </h2>
 
-                        <p className="text-xs text-gray-500 mb-1">
+                        <p className="text-xs text-rose-500/70 mb-2">
                             {new Date(d.date_time).toLocaleString()}
                         </p>
 
                         {d.location && (
-                            <p className="text-sm text-gray-700 mb-1">📍 {d.location}</p>
+                            <p className="text-sm text-rose-600/80 mb-2 flex items-center gap-1">
+                                <span>📍</span>
+                                <span>{d.location}</span>
+                            </p>
                         )}
 
                         {d.description && (
-                            <p className="text-sm text-gray-600 line-clamp-3 mb-2">
+                            <p className="text-sm text-rose-600/70 line-clamp-3 mb-3 leading-relaxed">
                                 {d.description}
                             </p>
                         )}
 
                         <span
-                            className={`mt-auto inline-flex items-center text-xs px-2 py-1 rounded-full ${
+                            className={`mt-auto inline-flex items-center justify-center text-xs px-3 py-1.5 rounded-full font-semibold ${
                                 d.privacy === "PRIVATE"
-                                    ? "bg-gray-100 text-gray-600"
-                                    : "bg-rose-50 text-rose-500"
+                                    ? "bg-rose-100/50 text-rose-600 border border-rose-200/50"
+                                    : "bg-gradient-to-r from-rose-400/20 to-pink-400/20 text-rose-600 border border-rose-300/50"
                             }`}
                         >
-              {d.privacy === "PRIVATE" ? "Private" : "Public"}
-            </span>
+                            {d.privacy === "PRIVATE" ? "🔒 Private" : "🌍 Public"}
+                        </span>
                     </article>
                 );
             })}

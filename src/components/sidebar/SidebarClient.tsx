@@ -80,6 +80,8 @@ export default function SidebarClient({ counts }: { counts?: NavCounts }) {
         }
     }, [pathname]);
 
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
     const handleSignOut = () => {
         try {
             localStorage.removeItem("token");
@@ -100,15 +102,15 @@ export default function SidebarClient({ counts }: { counts?: NavCounts }) {
                 onClick={toggle}
                 aria-label="Toggle sidebar"
                 aria-expanded={open}
-                className="fixed top-3 left-3 z-50 p-2 rounded-md bg-white border shadow-sm hover:bg-gray-100 transition"
+                className="fixed top-4 left-4 z-50 p-2.5 rounded-xl glass-strong shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-200"
             >
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 text-black"
+                    className="h-5 w-5 text-rose-600"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
-                    strokeWidth={2}
+                    strokeWidth={2.5}
                 >
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
@@ -116,30 +118,36 @@ export default function SidebarClient({ counts }: { counts?: NavCounts }) {
 
             <aside
                 className={clsx(
-                    "fixed top-0 left-0 z-40 h-full w-64 bg-white border-r transition-transform duration-300",
+                    "fixed top-0 left-0 z-40 h-full w-72 glass-strong border-r border-rose-100/50 transition-all duration-300 ease-out shadow-xl",
                     open ? "translate-x-0" : "-translate-x-full"
                 )}
             >
-                <div className="p-4 pt-12">
+                <div className="p-6 pt-16 border-b border-rose-100/50">
                     <Link
-                        href="/"
-                        className="block text-xl font-bold tracking-tight truncate text-rose-600"
+                        href="/profile"
+                        className="block group"
                         title="Date Photo Book"
+                        onClick={() => setOpen(false)}
                     >
-                        Date Photo Book
+                        <h1 className="text-2xl font-bold bg-gradient-to-r from-rose-400 via-pink-500 to-rose-600 bg-clip-text text-transparent group-hover:scale-105 transition-transform inline-block">
+                            Date Photo Book
+                        </h1>
+                        <p className="text-sm text-rose-400/70 mt-1 flex items-center gap-1">
+                            <span>💕</span>
+                            Capture every date
+                        </p>
                     </Link>
-                    <p className="text-sm text-gray-500">Capture every date.</p>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-3 mt-4 space-y-6">
+                <div className="flex-1 overflow-y-auto px-4 py-6 space-y-8">
                     {NAV_SECTIONS.map((section, idx) => (
-                        <div key={idx}>
+                        <div key={idx} className="animate-slide-in" style={{ animationDelay: `${idx * 50}ms` }}>
                             {section.title && (
-                                <div className="mb-2 px-1 text-[11px] font-semibold uppercase text-gray-500">
+                                <div className="mb-3 px-2 text-xs font-bold uppercase tracking-wider text-rose-400/60">
                                     {section.title}
                                 </div>
                             )}
-                            <ul className="space-y-1">
+                            <ul className="space-y-1.5">
                                 {section.items.map((item) => {
                                     const active = pathname === item.href || pathname.startsWith(item.href + "/");
                                     const badge = item.badgeKey && counts?.[item.badgeKey] ? counts[item.badgeKey] : null;
@@ -149,12 +157,12 @@ export default function SidebarClient({ counts }: { counts?: NavCounts }) {
                                             <li key="signout">
                                                 <button
                                                     type="button"
-                                                    onClick={handleSignOut}
-                                                    className="w-full text-left flex items-center justify-between rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                                                    onClick={() => setShowLogoutConfirm(true)}
+                                                    className="w-full text-left flex items-center justify-between rounded-xl px-4 py-2.5 text-sm text-rose-600/80 hover:bg-rose-50/70 hover:text-rose-700 transition-all duration-200 group"
                                                 >
-                                                    <div className="flex items-center gap-2 min-w-0">
-                                                        <span className="inline-block h-2.5 w-2.5 rounded-full bg-gray-400 flex-none" />
-                                                        <span className="truncate">Sign out</span>
+                                                    <div className="flex items-center gap-3 min-w-0">
+                                                        <span className="inline-block h-2 w-2 rounded-full bg-rose-300 group-hover:bg-rose-400 flex-none" />
+                                                        <span className="truncate font-medium">Sign out</span>
                                                     </div>
                                                 </button>
                                             </li>
@@ -167,30 +175,36 @@ export default function SidebarClient({ counts }: { counts?: NavCounts }) {
                                                 href={item.href}
                                                 title={item.label}
                                                 className={clsx(
-                                                    "flex items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors",
-                                                    active ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
+                                                    "flex items-center justify-between rounded-xl px-4 py-2.5 text-sm transition-all duration-200 group",
+                                                    active
+                                                        ? "bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-lg shadow-rose-200/50 scale-[1.02]"
+                                                        : "text-rose-700/70 hover:bg-rose-50/70 hover:text-rose-800"
                                                 )}
                                                 onClick={() => setOpen(false)}
                                             >
-                                                <div className="flex items-center gap-2 min-w-0">
-                          <span
-                              className={clsx(
-                                  "inline-block h-2.5 w-2.5 rounded-full flex-none",
-                                  active ? "bg-white" : "bg-gray-400"
-                              )}
-                              aria-hidden
-                          />
-                                                    <span className="truncate">{item.label}</span>
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <span
+                                                        className={clsx(
+                                                            "inline-block h-2 w-2 rounded-full flex-none transition-all",
+                                                            active
+                                                                ? "bg-white"
+                                                                : "bg-rose-300/50 group-hover:bg-rose-400"
+                                                        )}
+                                                        aria-hidden
+                                                    />
+                                                    <span className="truncate font-medium">{item.label}</span>
                                                 </div>
                                                 {badge ? (
                                                     <span
                                                         className={clsx(
-                                                            "ml-3 inline-flex min-w-6 items-center justify-center rounded-full px-2 text-xs",
-                                                            active ? "bg-white/20 text-white" : "bg-gray-200 text-gray-800"
+                                                            "ml-3 inline-flex min-w-[24px] items-center justify-center rounded-full px-2 py-0.5 text-xs font-semibold",
+                                                            active
+                                                                ? "bg-white/30 text-white"
+                                                                : "bg-rose-100 text-rose-600 group-hover:bg-rose-200"
                                                         )}
                                                     >
-                            {badge}
-                          </span>
+                                                        {badge}
+                                                    </span>
                                                 ) : null}
                                             </Link>
                                         </li>
@@ -201,6 +215,34 @@ export default function SidebarClient({ counts }: { counts?: NavCounts }) {
                     ))}
                 </div>
             </aside>
+
+            {/* Logout Confirmation Modal */}
+            {showLogoutConfirm && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="glass-strong rounded-3xl shadow-2xl max-w-sm w-full p-6 space-y-5 animate-slide-in">
+                        <h2 className="text-2xl font-bold bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent">
+                            Sign Out
+                        </h2>
+                        <p className="text-rose-600/80 text-sm">
+                            Are you sure you want to sign out?
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowLogoutConfirm(false)}
+                                className="px-5 py-2.5 rounded-xl border-2 border-rose-200/50 text-rose-700 text-sm font-semibold hover:bg-rose-50/50 transition-all"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSignOut}
+                                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white text-sm font-semibold hover:from-rose-600 hover:to-pink-600 shadow-lg shadow-rose-200/50 hover:scale-105 active:scale-95 transition-all"
+                            >
+                                Sign Out
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

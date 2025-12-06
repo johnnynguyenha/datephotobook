@@ -14,9 +14,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <SidebarClient />
         </AuthSidebarGate>
 
-        <main className="min-h-0">
-            {children}
-        </main>
+        {children}
         </body>
         </html>
     );

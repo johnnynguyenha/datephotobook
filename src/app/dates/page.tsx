@@ -70,23 +70,36 @@ export default function DatesPage() {
     }, [userId]);
 
     return (
-        <main className="min-h-screen bg-gradient-to-br from-pink-100 via-rose-100 to-rose-200 flex flex-col items-center py-10 px-4">
-            <div className="bg-white/80 backdrop-blur-md shadow-lg p-6 w-full max-w-4xl mb-6 rounded-2xl">
-                <h1 className="text-2xl font-bold text-rose-600">My Dates</h1>
-                <p className="text-gray-600 text-sm mt-1">
+        <main className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-rose-100 flex flex-col items-center py-10 px-4 relative overflow-hidden">
+            {/* Decorative background elements */}
+            <div className="absolute top-0 left-0 w-64 h-64 bg-rose-200/20 rounded-full blur-3xl animate-float"></div>
+            <div className="absolute bottom-0 right-0 w-96 h-96 bg-pink-200/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '1.5s' }}></div>
+            
+            <div className="glass-strong shadow-2xl p-8 w-full max-w-4xl mb-8 rounded-3xl relative z-10 animate-slide-in">
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent mb-2">
+                    My Dates
+                </h1>
+                <p className="text-rose-600/70 text-sm">
                     All the dates you&apos;ve saved.
                 </p>
             </div>
 
             {loading ? (
-                <p className="text-gray-600 mt-4">Loading dates...</p>
+                <div className="relative z-10">
+                    <p className="text-rose-600/70 mt-4 text-center">Loading dates...</p>
+                </div>
             ) : error ? (
-                <p className="text-red-500 mt-4">{error}</p>
+                <div className="relative z-10 p-4 rounded-xl bg-red-50 border border-red-200">
+                    <p className="text-red-600">{error}</p>
+                </div>
             ) : dates.length === 0 ? (
-                <p className="text-gray-600 mt-4">You don&apos;t have any dates yet.</p>
+                <div className="relative z-10 glass-strong p-8 rounded-3xl text-center">
+                    <p className="text-rose-600/70 text-lg">You don&apos;t have any dates yet.</p>
+                    <p className="text-rose-500/60 text-sm mt-2">Create your first date to get started! 💕</p>
+                </div>
             ) : (
-                <section className="w-full max-w-5xl grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                    {dates.map((d) => {
+                <section className="w-full max-w-5xl grid gap-6 sm:grid-cols-2 lg:grid-cols-3 relative z-10">
+                    {dates.map((d, index) => {
                         const raw = d.image_path?.toString().trim();
                         let imageSrc = "/images/heart.jpg";
                         if (raw && raw !== "null" && raw !== "undefined") {
@@ -96,13 +109,14 @@ export default function DatesPage() {
                         return (
                             <article
                                 key={d.date_id}
-                                className="bg-white/80 rounded-xl shadow hover:shadow-lg transition p-4 flex flex-col overflow-hidden"
+                                className="glass-strong rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-5 flex flex-col overflow-hidden hover:scale-[1.02] animate-slide-in"
+                                style={{ animationDelay: `${index * 100}ms` }}
                             >
-                                <div className="relative w-full h-48 mb-3 overflow-hidden rounded-lg">
+                                <div className="relative w-full h-52 mb-4 overflow-hidden rounded-xl group">
                                     <img
                                         src={imageSrc}
                                         alt={d.title || "Date image"}
-                                        className="object-cover w-full h-full"
+                                        className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-110"
                                         onError={(e) => {
                                             const img = e.currentTarget;
                                             if (!img.src.endsWith("/images/heart.jpg")) {
@@ -110,37 +124,39 @@ export default function DatesPage() {
                                             }
                                         }}
                                     />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                 </div>
 
-                                <h2 className="font-semibold text-rose-700 truncate">
+                                <h2 className="font-bold text-rose-700 truncate text-lg mb-2">
                                     {d.title || "Untitled date"}
                                 </h2>
 
-                                <p className="text-xs text-gray-500 mb-1">
+                                <p className="text-xs text-rose-500/70 mb-2">
                                     {new Date(d.date_time).toLocaleString()}
                                 </p>
 
                                 {d.location && (
-                                    <p className="text-sm text-gray-700 mb-1">
-                                        📍 {d.location}
+                                    <p className="text-sm text-rose-600/80 mb-2 flex items-center gap-1">
+                                        <span>📍</span>
+                                        <span>{d.location}</span>
                                     </p>
                                 )}
 
                                 {d.description && (
-                                    <p className="text-sm text-gray-600 line-clamp-3 mb-2">
+                                    <p className="text-sm text-rose-600/70 line-clamp-3 mb-3 leading-relaxed">
                                         {d.description}
                                     </p>
                                 )}
 
                                 <span
-                                    className={`mt-auto inline-flex items-center text-xs px-2 py-1 rounded-full ${
+                                    className={`mt-auto inline-flex items-center justify-center text-xs px-3 py-1.5 rounded-full font-semibold ${
                                         d.privacy === "PRIVATE"
-                                            ? "bg-gray-100 text-gray-600"
-                                            : "bg-rose-50 text-rose-500"
+                                            ? "bg-rose-100/50 text-rose-600 border border-rose-200/50"
+                                            : "bg-gradient-to-r from-rose-400/20 to-pink-400/20 text-rose-600 border border-rose-300/50"
                                     }`}
                                 >
-                  {d.privacy === "PRIVATE" ? "Private" : "Public"}
-                </span>
+                                    {d.privacy === "PRIVATE" ? "🔒 Private" : "🌍 Public"}
+                                </span>
                             </article>
                         );
                     })}

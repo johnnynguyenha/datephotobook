@@ -81,16 +81,22 @@ export default function SignupPage() {
     };
 
     return (
-        <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-100 via-rose-100 to-rose-200">
-            <div className="bg-white/80 backdrop-blur-md p-8 rounded-2xl shadow-xl w-full max-w-sm">
-                <h1 className="text-3xl font-bold text-center mb-4 text-rose-600">
-                    Create Account
-                </h1>
-                <p className="text-center text-gray-600 mb-6">
-                    {step === 1
-                        ? "Start capturing your memories today."
-                        : "Tell us about your partner."}
-                </p>
+        <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-rose-50 via-pink-50 to-rose-100 p-4 relative overflow-hidden">
+            {/* Decorative background elements */}
+            <div className="absolute top-20 left-10 w-32 h-32 bg-rose-200/30 rounded-full blur-3xl animate-float"></div>
+            <div className="absolute bottom-20 right-10 w-40 h-40 bg-pink-200/30 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }}></div>
+            
+            <div className="glass-strong p-10 rounded-3xl shadow-2xl w-full max-w-md relative z-10 animate-slide-in">
+                <div className="text-center mb-8">
+                    <h1 className="text-4xl font-bold bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 bg-clip-text text-transparent mb-3">
+                        Create Account
+                    </h1>
+                    <p className="text-rose-600/70 text-sm">
+                        {step === 1
+                            ? "Start capturing your memories today."
+                            : "Tell us about your partner."}
+                    </p>
+                </div>
 
                 {step === 1 && (
                     <form
@@ -98,7 +104,7 @@ export default function SignupPage() {
                             e.preventDefault();
                             handleNext();
                         }}
-                        className="flex flex-col space-y-4"
+                        className="flex flex-col space-y-5"
                     >
                         <input
                             type="text"
@@ -106,7 +112,7 @@ export default function SignupPage() {
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             required
-                            className="p-3 rounded-lg border border-rose-200 focus:ring-2 focus:ring-rose-400 outline-none text-black"
+                            className="w-full p-4 rounded-xl border-2 border-rose-200/50 bg-white/80 focus:border-rose-400 focus:ring-4 focus:ring-rose-200/50 outline-none text-rose-900 placeholder:text-rose-300 transition-all"
                         />
 
                         <input
@@ -115,7 +121,7 @@ export default function SignupPage() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
-                            className="p-3 rounded-lg border border-rose-200 focus:ring-2 focus:ring-rose-400 outline-none text-black"
+                            className="w-full p-4 rounded-xl border-2 border-rose-200/50 bg-white/80 focus:border-rose-400 focus:ring-4 focus:ring-rose-200/50 outline-none text-rose-900 placeholder:text-rose-300 transition-all"
                             autoComplete="email"
                         />
 
@@ -125,7 +131,7 @@ export default function SignupPage() {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
-                            className="p-3 rounded-lg border border-rose-200 focus:ring-2 focus:ring-rose-400 outline-none text-black"
+                            className="w-full p-4 rounded-xl border-2 border-rose-200/50 bg-white/80 focus:border-rose-400 focus:ring-4 focus:ring-rose-200/50 outline-none text-rose-900 placeholder:text-rose-300 transition-all"
                             autoComplete="new-password"
                         />
 
@@ -135,15 +141,19 @@ export default function SignupPage() {
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             required
-                            className="p-3 rounded-lg border border-rose-200 focus:ring-2 focus:ring-rose-400 outline-none text-black"
+                            className="w-full p-4 rounded-xl border-2 border-rose-200/50 bg-white/80 focus:border-rose-400 focus:ring-4 focus:ring-rose-200/50 outline-none text-rose-900 placeholder:text-rose-300 transition-all"
                             autoComplete="new-password"
                         />
 
-                        {error && <p className="text-red-500 text-sm">{error}</p>}
+                        {error && (
+                            <div className="p-3 rounded-xl bg-red-50 border border-red-200">
+                                <p className="text-red-600 text-sm">{error}</p>
+                            </div>
+                        )}
 
                         <button
                             type="submit"
-                            className="bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 rounded-lg transition"
+                            className="w-full bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-semibold py-4 rounded-xl shadow-lg shadow-rose-200/50 hover:shadow-xl hover:shadow-rose-300/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
                         >
                             Continue
                         </button>
@@ -151,14 +161,16 @@ export default function SignupPage() {
                 )}
 
                 {step === 2 && (
-                    <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
-                        <div className="text-gray-700">Do you have a partner?</div>
+                    <form onSubmit={handleSubmit} className="flex flex-col space-y-5">
+                        <div className="text-rose-700 font-medium mb-2">Do you have a partner?</div>
                         <div className="flex gap-3">
                             <button
                                 type="button"
                                 onClick={() => setHasPartner(false)}
-                                className={`flex-1 py-2 rounded-lg border ${
-                                    hasPartner === false ? "bg-rose-500 text-white" : "bg-white"
+                                className={`flex-1 py-3 rounded-xl border-2 font-semibold transition-all duration-200 ${
+                                    hasPartner === false
+                                        ? "bg-gradient-to-r from-rose-500 to-pink-500 text-white border-rose-400 shadow-lg scale-[1.02]"
+                                        : "bg-white/80 text-rose-600 border-rose-200/50 hover:border-rose-300 hover:bg-rose-50/50"
                                 }`}
                             >
                                 No
@@ -166,8 +178,10 @@ export default function SignupPage() {
                             <button
                                 type="button"
                                 onClick={() => setHasPartner(true)}
-                                className={`flex-1 py-2 rounded-lg border ${
-                                    hasPartner === true ? "bg-rose-500 text-white" : "bg-white"
+                                className={`flex-1 py-3 rounded-xl border-2 font-semibold transition-all duration-200 ${
+                                    hasPartner === true
+                                        ? "bg-gradient-to-r from-rose-500 to-pink-500 text-white border-rose-400 shadow-lg scale-[1.02]"
+                                        : "bg-white/80 text-rose-600 border-rose-200/50 hover:border-rose-300 hover:bg-rose-50/50"
                                 }`}
                             >
                                 Yes
@@ -175,40 +189,49 @@ export default function SignupPage() {
                         </div>
 
                         {hasPartner && (
-                            <div className="space-y-1">
+                            <div className="space-y-2">
                                 <input
                                     type="text"
                                     placeholder="Partner's Username (optional)"
                                     value={partnerUsername}
                                     onChange={(e) => setPartnerUsername(e.target.value)}
-                                    // ⬇️ Not required — they can link later even if they chose "Yes"
-                                    className="p-3 rounded-lg border border-rose-200 focus:ring-2 focus:ring-rose-400 outline-none text-black"
+                                    className="w-full p-4 rounded-xl border-2 border-rose-200/50 bg-white/80 focus:border-rose-400 focus:ring-4 focus:ring-rose-200/50 outline-none text-rose-900 placeholder:text-rose-300 transition-all"
                                 />
-                                <p className="text-xs text-gray-500">
-                                    If your partner hasn’t signed up yet, leave this blank — you can
+                                <p className="text-xs text-rose-500/70">
+                                    If your partner hasn't signed up yet, leave this blank — you can
                                     link them later from your profile.
                                 </p>
                             </div>
                         )}
 
-                        {error && <p className="text-red-500 text-sm">{error}</p>}
-                        {info && <p className="text-rose-600 text-sm">{info}</p>}
+                        {error && (
+                            <div className="p-3 rounded-xl bg-red-50 border border-red-200">
+                                <p className="text-red-600 text-sm">{error}</p>
+                            </div>
+                        )}
+                        {info && (
+                            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200">
+                                <p className="text-rose-600 text-sm">{info}</p>
+                            </div>
+                        )}
 
                         <button
                             type="submit"
                             disabled={submitting}
-                            className="bg-rose-500 hover:bg-rose-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-2 rounded-lg transition"
+                            className="w-full bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-xl shadow-lg shadow-rose-200/50 hover:shadow-xl hover:shadow-rose-300/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
                         >
                             {submitting ? "Creating..." : "Sign Up"}
                         </button>
 
-                        <BackButton className="text-gray-500 underline text-sm">Back</BackButton>
+                        <BackButton className="text-rose-500 hover:text-rose-600 underline text-sm text-center w-full transition-colors">
+                            Back
+                        </BackButton>
                     </form>
                 )}
 
-                <p className="text-sm text-center mt-4 text-gray-600">
+                <p className="text-sm text-center mt-6 text-rose-600/70">
                     Already have an account?{" "}
-                    <Link href="/login" className="text-rose-600 hover:underline">
+                    <Link href="/login" className="text-rose-500 hover:text-rose-600 font-semibold underline decoration-2 underline-offset-2 transition-colors">
                         Log in
                     </Link>
                 </p>

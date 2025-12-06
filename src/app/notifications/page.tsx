@@ -1,7 +1,7 @@
 "use client";
 
 const CARD_CLASS =
-    "bg-white/85 backdrop-blur-md shadow-lg rounded-2xl border border-rose-100";
+    "glass-strong shadow-xl rounded-3xl border border-rose-100/50";
 
 type Notification = {
     id: string;
@@ -31,60 +31,71 @@ const NOTIFICATIONS: Notification[] = [
     {
         id: "3",
         title: "Share your reflection",
-        message: "Add a note to last week’s concert date so it stays fresh.",
+        message: "Add a note to last week's concert date so it stays fresh.",
         timeAgo: "3d ago",
         type: "partner",
     },
 ];
 
 const TYPE_COLORS: Record<Notification["type"], string> = {
-    reminder: "bg-rose-100 text-rose-600 ring-rose-200",
-    upload: "bg-sky-100 text-sky-600 ring-sky-200",
-    partner: "bg-amber-100 text-amber-600 ring-amber-200",
+    reminder: "bg-gradient-to-br from-rose-100 to-pink-100 text-rose-600 ring-rose-200",
+    upload: "bg-gradient-to-br from-sky-100 to-blue-100 text-sky-600 ring-sky-200",
+    partner: "bg-gradient-to-br from-amber-100 to-yellow-100 text-amber-600 ring-amber-200",
 };
 
 export default function NotificationsPage() {
     return (
-        <main className="min-h-screen bg-gradient-to-br from-pink-100 via-rose-100 to-rose-200 px-4 py-10 flex justify-center">
-            <div className="w-full max-w-3xl space-y-6">
-                <header className={`${CARD_CLASS} p-6`}>
-                    <h1 className="text-3xl font-semibold text-rose-700">Notifications</h1>
-                    <p className="text-gray-600 mt-1">
+        <main className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-rose-100 px-4 py-10 flex justify-center relative overflow-hidden">
+            {/* Decorative background elements */}
+            <div className="absolute top-0 left-0 w-64 h-64 bg-rose-200/20 rounded-full blur-3xl animate-float"></div>
+            <div className="absolute bottom-0 right-0 w-96 h-96 bg-pink-200/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '1.5s' }}></div>
+            
+            <div className="w-full max-w-3xl space-y-6 relative z-10">
+                <header className={`${CARD_CLASS} p-8 animate-slide-in`}>
+                    <h1 className="text-4xl font-bold bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent mb-2">
+                        Notifications
+                    </h1>
+                    <p className="text-rose-600/70 mt-1">
                         Gentle nudges to help you save memories, stay synced, and never miss a date.
                     </p>
                 </header>
 
-                <section className={`${CARD_CLASS} p-6`}>
-                    <div className="flex flex-wrap items-center gap-3 mb-6">
-                        <button className="rounded-full bg-rose-600 text-white px-4 py-1.5 text-sm font-medium shadow">
+                <section className={`${CARD_CLASS} p-8 animate-slide-in`} style={{ animationDelay: '100ms' }}>
+                    <div className="flex flex-wrap items-center gap-4 mb-6">
+                        <button className="rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white px-5 py-2 text-sm font-semibold shadow-lg shadow-rose-200/50 hover:from-rose-600 hover:to-pink-600 hover:scale-105 active:scale-95 transition-all">
                             Mark all read
                         </button>
-                        <span className="text-sm text-gray-500">
+                        <span className="text-sm text-rose-600/70 font-medium">
                             {NOTIFICATIONS.filter((n) => n.unread).length} unread
                         </span>
                     </div>
                     <ul className="space-y-4">
-                        {NOTIFICATIONS.map((item) => (
+                        {NOTIFICATIONS.map((item, index) => (
                             <li
                                 key={item.id}
-                                className={`p-4 rounded-xl border border-rose-100 flex gap-4 ${item.unread ? "bg-white" : "bg-white/70"}`}
+                                className={`p-5 rounded-2xl border-2 flex gap-4 transition-all hover:scale-[1.01] animate-slide-in ${
+                                    item.unread
+                                        ? "bg-white border-rose-300/50 shadow-md"
+                                        : "bg-white/70 border-rose-200/50"
+                                }`}
+                                style={{ animationDelay: `${(index + 1) * 100}ms` }}
                             >
                                 <span
-                                    className={`mt-1 inline-flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold ring-2 ${TYPE_COLORS[item.type]}`}
+                                    className={`mt-1 inline-flex h-12 w-12 items-center justify-center rounded-full text-lg font-semibold ring-2 ${TYPE_COLORS[item.type]} flex-shrink-0`}
                                 >
                                     {item.type === "reminder" && "⏰"}
                                     {item.type === "upload" && "📷"}
                                     {item.type === "partner" && "💬"}
                                 </span>
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between gap-3">
-                                        <h3 className="text-base font-semibold text-gray-900 truncate">{item.title}</h3>
-                                        <span className="text-xs text-gray-500 whitespace-nowrap">{item.timeAgo}</span>
+                                    <div className="flex items-center justify-between gap-3 mb-1">
+                                        <h3 className="text-base font-bold text-rose-800 truncate">{item.title}</h3>
+                                        <span className="text-xs text-rose-500/70 whitespace-nowrap font-medium">{item.timeAgo}</span>
                                     </div>
-                                    <p className="text-sm text-gray-600 mt-1">{item.message}</p>
+                                    <p className="text-sm text-rose-600/80 mt-1 leading-relaxed">{item.message}</p>
                                     {item.unread && (
-                                        <span className="inline-flex items-center gap-1 text-xs text-rose-500 mt-2">
-                                            <span className="h-2 w-2 rounded-full bg-rose-400" />
+                                        <span className="inline-flex items-center gap-1.5 text-xs text-rose-600 font-semibold mt-3">
+                                            <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
                                             New
                                         </span>
                                     )}

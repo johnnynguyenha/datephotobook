@@ -94,21 +94,27 @@ export default function CreateDatePage() {
     }
 
     const inputBase =
-        "border border-rose-200 bg-white/90 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-rose-400 focus:border-rose-400 placeholder:text-gray-500 text-gray-800";
+        "w-full border-2 border-rose-200/50 bg-white/80 rounded-xl px-4 py-3 focus:outline-none focus:ring-4 focus:ring-rose-200/50 focus:border-rose-400 placeholder:text-rose-300 text-rose-900 transition-all";
 
     return (
-        <main className="min-h-screen bg-gradient-to-br from-pink-100 via-rose-100 to-rose-200 flex items-center justify-center p-6">
-            <div className="w-full max-w-2xl bg-white/80 backdrop-blur-md shadow-lg rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-6">
-                    <h1 className="text-2xl font-bold text-rose-600">Create a Date</h1>
-                    <Link href="/profile" className="text-rose-600 hover:underline">
+        <main className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-rose-100 flex items-center justify-center p-6 relative overflow-hidden">
+            {/* Decorative background elements */}
+            <div className="absolute top-20 left-10 w-32 h-32 bg-rose-200/30 rounded-full blur-3xl animate-float"></div>
+            <div className="absolute bottom-20 right-10 w-40 h-40 bg-pink-200/30 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }}></div>
+            
+            <div className="w-full max-w-2xl glass-strong shadow-2xl rounded-3xl p-8 relative z-10 animate-slide-in">
+                <div className="flex items-center justify-between mb-8">
+                    <h1 className="text-3xl font-bold bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent">
+                        Create a Date
+                    </h1>
+                    <Link href="/profile" className="text-rose-500 hover:text-rose-600 font-semibold underline decoration-2 underline-offset-2 transition-colors">
                         Back to Profile
                     </Link>
                 </div>
 
-                <form onSubmit={handleSubmit} className="grid gap-4">
-                    <label className="grid gap-1">
-                        <span className="text-sm font-medium text-gray-700">Title</span>
+                <form onSubmit={handleSubmit} className="grid gap-5">
+                    <label className="grid gap-2">
+                        <span className="text-sm font-semibold text-rose-700">Title</span>
                         <input
                             name="title"
                             value={form.title}
@@ -119,41 +125,44 @@ export default function CreateDatePage() {
                         />
                     </label>
 
-                    <label className="grid gap-1">
-            <span className="text-sm font-medium text-gray-700">
-              Description
-            </span>
+                    <label className="grid gap-2">
+                        <span className="text-sm font-semibold text-rose-700">
+                            Description
+                        </span>
                         <textarea
                             name="description"
                             value={form.description}
                             onChange={handleChange}
                             placeholder="A fun outing or event"
-                            className={inputBase}
-                            rows={3}
+                            className={`${inputBase} resize-none`}
+                            rows={4}
                         />
                     </label>
 
-                    <label className="grid gap-1">
-            <span className="text-sm font-medium text-gray-700">
-              Upload Image
-            </span>
+                    <label className="grid gap-2">
+                        <span className="text-sm font-semibold text-rose-700">
+                            Upload Image
+                        </span>
                         <input
                             type="file"
                             accept="image/*"
                             onChange={handleImageFile}
-                            className="block w-full text-gray-800 file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-rose-600 file:text-white hover:file:bg-rose-700"
+                            className="block w-full text-rose-900 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:bg-gradient-to-r file:from-rose-500 file:to-pink-500 file:text-white file:font-semibold hover:file:from-rose-600 hover:file:to-pink-600 file:transition-all file:cursor-pointer cursor-pointer"
                             required
                         />
                         {imageFile && (
-                            <span className="text-xs text-gray-600">Image selected ✓</span>
+                            <span className="text-xs text-rose-600 font-medium flex items-center gap-1">
+                                <span>✓</span>
+                                <span>Image selected: {imageFile.name}</span>
+                            </span>
                         )}
                     </label>
 
-                    <div className="grid sm:grid-cols-2 gap-4">
-                        <label className="grid gap-1">
-              <span className="text-sm font-medium text-gray-700">
-                Date & Time
-              </span>
+                    <div className="grid sm:grid-cols-2 gap-5">
+                        <label className="grid gap-2">
+                            <span className="text-sm font-semibold text-rose-700">
+                                Date & Time
+                            </span>
                             <input
                                 type="datetime-local"
                                 name="date_time"
@@ -163,10 +172,10 @@ export default function CreateDatePage() {
                                 required
                             />
                         </label>
-                        <label className="grid gap-1">
-              <span className="text-sm font-medium text-gray-700">
-                Location
-              </span>
+                        <label className="grid gap-2">
+                            <span className="text-sm font-semibold text-rose-700">
+                                Location
+                            </span>
                             <input
                                 name="location"
                                 value={form.location}
@@ -177,23 +186,23 @@ export default function CreateDatePage() {
                         </label>
                     </div>
 
-                    <label className="grid gap-1">
-                        <span className="text-sm font-medium text-gray-700">Privacy</span>
+                    <label className="grid gap-2">
+                        <span className="text-sm font-semibold text-rose-700">Privacy</span>
                         <select
                             name="privacy"
                             value={form.privacy}
                             onChange={handleChange}
                             className={inputBase}
                         >
-                            <option value="PUBLIC">Public</option>
-                            <option value="PRIVATE">Private</option>
+                            <option value="PUBLIC">🌍 Public</option>
+                            <option value="PRIVATE">🔒 Private</option>
                         </select>
                     </label>
 
                     <button
                         type="submit"
                         disabled={submitting}
-                        className="mt-2 rounded-md bg-rose-600 text-white px-4 py-2 font-semibold shadow hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-400 disabled:opacity-60"
+                        className="mt-2 w-full rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white px-6 py-4 font-semibold shadow-lg shadow-rose-200/50 hover:from-rose-600 hover:to-pink-600 hover:shadow-xl hover:shadow-rose-300/50 focus:outline-none focus:ring-4 focus:ring-rose-200/50 disabled:opacity-60 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
                     >
                         {submitting ? "Saving..." : "Save Date"}
                     </button>

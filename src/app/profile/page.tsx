@@ -173,11 +173,15 @@ export default function ProfilePage() {
         : firstName;
 
     return (
-        <main className="min-h-screen bg-gradient-to-br from-pink-100 via-rose-100 to-rose-200 flex flex-col items-center py-10 px-4">
+        <main className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-rose-100 flex flex-col items-center py-10 px-4 relative overflow-hidden">
+            {/* Decorative background elements */}
+            <div className="absolute top-0 left-0 w-64 h-64 bg-rose-200/20 rounded-full blur-3xl animate-float"></div>
+            <div className="absolute bottom-0 right-0 w-96 h-96 bg-pink-200/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '1.5s' }}></div>
+            
             {/* Profile Card */}
-            <div className="bg-white/80 backdrop-blur-md shadow-lg p-6 w-full max-w-2xl text-center mb-6 rounded-2xl relative">
-                <div className="flex flex-col items-center space-y-4">
-                    <div className="relative w-28 h-28 rounded-full overflow-hidden border-4 border-rose-300 shadow-md">
+            <div className="glass-strong shadow-2xl p-8 w-full max-w-2xl text-center mb-8 rounded-3xl relative z-10 animate-slide-in">
+                <div className="flex flex-col items-center space-y-5">
+                    <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-rose-300/80 shadow-xl animate-pulse-glow">
                         <img
                             src="/images/heart.jpg"
                             alt="Profile"
@@ -191,11 +195,11 @@ export default function ProfilePage() {
                         />
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3 flex-wrap justify-center">
                         {profileLoading ? (
-                            <h1 className="text-2xl font-bold text-rose-600">Loading...</h1>
+                            <h1 className="text-3xl font-bold bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent">Loading...</h1>
                         ) : (
-                            <h1 className="text-2xl font-bold text-rose-600">
+                            <h1 className="text-3xl font-bold bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent">
                                 {displayTitle}
                             </h1>
                         )}
@@ -205,7 +209,8 @@ export default function ProfilePage() {
                                 setRequestsModalOpen(true);
                                 loadRequests();
                             }}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-rose-100 text-rose-600 hover:bg-rose-200 border border-rose-300 text-lg font-bold"
+                            className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-rose-400 to-pink-400 text-white hover:from-rose-500 hover:to-pink-500 border-2 border-white shadow-lg hover:scale-110 active:scale-95 transition-all duration-200 text-xl font-bold"
+                            aria-label="Add partner"
                         >
                             +
                         </button>
@@ -213,42 +218,46 @@ export default function ProfilePage() {
                         {partnerFirstName && (
                             <button
                                 onClick={() => setRemoveModalOpen(true)}
-                                className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-rose-100 text-rose-600 hover:bg-rose-200 border border-rose-300 text-lg font-bold"
+                                className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-rose-300 to-pink-300 text-rose-700 hover:from-rose-400 hover:to-pink-400 hover:text-white border-2 border-white shadow-lg hover:scale-110 active:scale-95 transition-all duration-200 text-xl font-bold"
+                                aria-label="Remove partner"
                             >
                                 –
                             </button>
                         )}
                     </div>
 
-                    <p className="text-gray-600 mt-1">
+                    <p className="text-rose-600/80 mt-2 text-lg italic">
                         {profile?.display_name
                             ? `"${profile.display_name}"`
                             : `"Making memories one date at a time 💕"`}
                     </p>
 
-                    <div className="mt-4">
+                    <div className="mt-6">
                         <Link
                             href="/create-date"
-                            className="rounded-lg bg-rose-600 text-white px-5 py-2.5 font-semibold shadow hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-400"
+                            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white px-6 py-3 font-semibold shadow-lg shadow-rose-200/50 hover:shadow-xl hover:shadow-rose-300/50 hover:scale-105 active:scale-95 transition-all duration-200"
                         >
-                            + Add Date
+                            <span className="text-xl">+</span>
+                            <span>Add Date</span>
                         </Link>
                     </div>
                 </div>
             </div>
 
-            <DateGrid />
+            <div className="relative z-10 w-full max-w-5xl">
+                <DateGrid />
+            </div>
 
             {requestsModalOpen && (
-                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-40">
-                    <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-5 space-y-4">
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="glass-strong rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-5 animate-slide-in">
                         <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-semibold text-rose-700">
+                            <h2 className="text-2xl font-bold bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent">
                                 Partner Requests
                             </h2>
                             <button
                                 onClick={() => setRequestsModalOpen(false)}
-                                className="text-gray-500 hover:text-gray-700 text-xl leading-none"
+                                className="text-rose-400 hover:text-rose-600 text-2xl leading-none w-8 h-8 flex items-center justify-center rounded-lg hover:bg-rose-50 transition-all"
                             >
                                 ×
                             </button>
@@ -260,12 +269,12 @@ export default function ProfilePage() {
                                 placeholder="Search user to send request..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full border border-rose-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-400 text-gray-800"
+                                className="flex-1 border-2 border-rose-200/50 bg-white/80 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-rose-200/50 focus:border-rose-400 text-rose-900 placeholder:text-rose-300 transition-all"
                             />
                             <button
                                 type="submit"
                                 disabled={searchLoading}
-                                className="bg-rose-600 text-white px-3 py-2 rounded-md text-sm font-semibold hover:bg-rose-700"
+                                className="bg-gradient-to-r from-rose-500 to-pink-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:from-rose-600 hover:to-pink-600 shadow-lg shadow-rose-200/50 hover:scale-105 active:scale-95 transition-all disabled:opacity-60"
                             >
                                 {searchLoading ? "..." : "Find"}
                             </button>
@@ -276,12 +285,12 @@ export default function ProfilePage() {
                                 {searchResults.map((u) => (
                                     <li
                                         key={u.user_id}
-                                        className="flex items-center justify-between border border-rose-100 rounded-md px-3 py-2"
+                                        className="flex items-center justify-between border-2 border-rose-200/50 bg-white/60 rounded-xl px-4 py-3 hover:bg-white/80 transition-all"
                                     >
-                                        <span className="text-sm text-gray-800">{u.username}</span>
+                                        <span className="text-sm font-medium text-rose-800">{u.username}</span>
                                         <button
                                             onClick={() => handleSendRequest(u.username)}
-                                            className="text-xs font-semibold bg-rose-600 text-white px-3 py-1 rounded-md hover:bg-rose-700"
+                                            className="text-xs font-semibold bg-gradient-to-r from-rose-500 to-pink-500 text-white px-4 py-1.5 rounded-lg hover:from-rose-600 hover:to-pink-600 shadow-md hover:scale-105 active:scale-95 transition-all"
                                         >
                                             Send
                                         </button>
@@ -293,24 +302,26 @@ export default function ProfilePage() {
                         <hr className="my-3" />
 
                         {requestsLoading ? (
-                            <p className="text-gray-600 text-sm">Loading requests...</p>
+                            <p className="text-rose-600/70 text-sm text-center py-4">Loading requests...</p>
                         ) : requestsError ? (
-                            <p className="text-red-500 text-sm">{requestsError}</p>
+                            <div className="p-3 rounded-xl bg-red-50 border border-red-200">
+                                <p className="text-red-600 text-sm">{requestsError}</p>
+                            </div>
                         ) : requests.length === 0 ? (
-                            <p className="text-gray-600 text-sm">No incoming requests.</p>
+                            <p className="text-rose-600/70 text-sm text-center py-4">No incoming requests.</p>
                         ) : (
                             <ul className="max-h-40 overflow-y-auto space-y-2">
                                 {requests.map((r) => (
                                     <li
                                         key={r.notification_id}
-                                        className="flex items-center justify-between border border-rose-100 rounded-md px-3 py-2"
+                                        className="flex items-center justify-between border-2 border-rose-200/50 bg-white/60 rounded-xl px-4 py-3 hover:bg-white/80 transition-all"
                                     >
-                    <span className="text-sm text-gray-800">
-                      {r.from_username}
-                    </span>
+                                        <span className="text-sm font-medium text-rose-800">
+                                            {r.from_username}
+                                        </span>
                                         <button
                                             onClick={() => handleAcceptRequest(r.notification_id)}
-                                            className="text-xs font-semibold bg-rose-600 text-white px-3 py-1 rounded-md hover:bg-rose-700"
+                                            className="text-xs font-semibold bg-gradient-to-r from-rose-500 to-pink-500 text-white px-4 py-1.5 rounded-lg hover:from-rose-600 hover:to-pink-600 shadow-md hover:scale-105 active:scale-95 transition-all"
                                         >
                                             Accept
                                         </button>
@@ -323,25 +334,25 @@ export default function ProfilePage() {
             )}
 
             {removeModalOpen && (
-                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-5 space-y-4">
-                        <h2 className="text-lg font-semibold text-rose-700">
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="glass-strong rounded-3xl shadow-2xl max-w-sm w-full p-6 space-y-5 animate-slide-in">
+                        <h2 className="text-2xl font-bold bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent">
                             Remove Partner
                         </h2>
-                        <p className="text-sm text-gray-700">
+                        <p className="text-rose-600/80 text-sm">
                             Are you sure you want to remove your current partner?
                         </p>
                         <div className="flex justify-end gap-3">
                             <button
                                 onClick={() => setRemoveModalOpen(false)}
-                                className="px-4 py-2 rounded-md border border-gray-300 text-gray-700 text-sm hover:bg-gray-50"
+                                className="px-5 py-2.5 rounded-xl border-2 border-rose-200/50 text-rose-700 text-sm font-semibold hover:bg-rose-50/50 transition-all disabled:opacity-60"
                                 disabled={removeLoading}
                             >
                                 No
                             </button>
                             <button
                                 onClick={handleRemovePartner}
-                                className="px-4 py-2 rounded-md bg-rose-600 text-white text-sm font-semibold hover:bg-rose-700 disabled:opacity-60"
+                                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white text-sm font-semibold hover:from-rose-600 hover:to-pink-600 shadow-lg shadow-rose-200/50 hover:scale-105 active:scale-95 transition-all disabled:opacity-60"
                                 disabled={removeLoading}
                             >
                                 {removeLoading ? "Removing..." : "Yes"}
