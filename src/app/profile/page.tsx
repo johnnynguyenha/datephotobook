@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import DateGrid from "@/components/DateGrid";
 
@@ -40,6 +40,11 @@ export default function ProfilePage() {
 
     const [removeModalOpen, setRemoveModalOpen] = useState(false);
     const [removeLoading, setRemoveLoading] = useState(false);
+
+    const [avatarUploading, setAvatarUploading] = useState(false);
+    const [avatarError, setAvatarError] = useState<string | null>(null);
+    const [avatarVersion, setAvatarVersion] = useState(0);
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     useEffect(() => {
         if (typeof window !== "undefined") {
@@ -87,7 +92,9 @@ export default function ProfilePage() {
         if (!searchTerm.trim()) return;
         try {
             setSearchLoading(true);
-            const res = await fetch(`/api/users/search?query=${encodeURIComponent(searchTerm.trim())}`);
+            const res = await fetch(
+                `/api/users/search?query=${encodeURIComponent(searchTerm.trim())}`
+            );
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "Search failed");
             setSearchResults(
@@ -130,7 +137,6 @@ export default function ProfilePage() {
             if (!res.ok) throw new Error(data.error || "Failed to accept request");
             alert("Partner accepted!");
             setRequestsModalOpen(false);
-            // refresh profile
             const prof = await fetch(`/api/profile?user_id=${userId}`);
             const profData = await prof.json();
             if (prof.ok) setProfile(profData);
@@ -162,6 +168,39 @@ export default function ProfilePage() {
         }
     }
 
+    async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+        if (!userId) return;
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setAvatarUploading(true);
+        setAvatarError(null);
+
+        try {
+            const formData = new FormData();
+            formData.append("avatar", file);
+            formData.append("user_id", userId);
+
+            const res = await fetch("/api/profile/avatar", {
+                method: "POST",
+                body: formData,
+            });
+
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                throw new Error(data.error || "Failed to upload profile picture");
+            }
+
+            setAvatarVersion((v) => v + 1);
+        } catch (err: any) {
+            console.error(err);
+            setAvatarError(err.message || "Failed to upload profile picture");
+        } finally {
+            setAvatarUploading(false);
+            if (e.target) e.target.value = "";
+        }
+    }
+
     const firstName = profile?.user_name?.split(" ")[0] ?? "Profile";
     const partnerFirstName =
         profile?.partner_name && profile.partner_name.trim() !== ""
@@ -172,18 +211,25 @@ export default function ProfilePage() {
         ? `${firstName} and ${partnerFirstName} 💞`
         : firstName;
 
+    const profileImageSrc =
+        userId != null
+            ? `/images/profile-${userId}.jpg?v=${avatarVersion}`
+            : "/images/heart.jpg";
+
     return (
         <main className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-rose-100 flex flex-col items-center py-10 px-4 relative overflow-hidden">
-            {/* Decorative background elements */}
+
             <div className="absolute top-0 left-0 w-64 h-64 bg-rose-200/20 rounded-full blur-3xl animate-float"></div>
-            <div className="absolute bottom-0 right-0 w-96 h-96 bg-pink-200/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '1.5s' }}></div>
-            
-            {/* Profile Card */}
+            <div
+                className="absolute bottom-0 right-0 w-96 h-96 bg-pink-200/20 rounded-full blur-3xl animate-float"
+                style={{ animationDelay: "1.5s" }}
+            ></div>
+
             <div className="glass-strong shadow-2xl p-8 w-full max-w-2xl text-center mb-8 rounded-3xl relative z-10 animate-slide-in">
                 <div className="flex flex-col items-center space-y-5">
                     <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-rose-300/80 shadow-xl animate-pulse-glow">
                         <img
-                            src="/images/heart.jpg"
+                            src={profileImageSrc}
                             alt="Profile"
                             className="object-cover w-full h-full"
                             onError={(e) => {
@@ -195,9 +241,34 @@ export default function ProfilePage() {
                         />
                     </div>
 
+                    {userId && (
+                        <div className="flex flex-col items-center gap-1">
+                            <button
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={avatarUploading}
+                                className="px-4 py-1.5 rounded-full text-xs font-medium bg-rose-50/80 border border-rose-200/70 text-rose-700 hover:bg-rose-100 transition disabled:opacity-50"
+                            >
+                                {avatarUploading ? "Updating…" : "Change photo"}
+                            </button>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={handleAvatarChange}
+                            />
+                            {avatarError && (
+                                <p className="text-xs text-red-500 mt-1">{avatarError}</p>
+                            )}
+                        </div>
+                    )}
+
                     <div className="flex items-center gap-3 flex-wrap justify-center">
                         {profileLoading ? (
-                            <h1 className="text-3xl font-bold bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent">Loading...</h1>
+                            <h1 className="text-3xl font-bold bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent">
+                                Loading...
+                            </h1>
                         ) : (
                             <h1 className="text-3xl font-bold bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent">
                                 {displayTitle}
@@ -287,7 +358,9 @@ export default function ProfilePage() {
                                         key={u.user_id}
                                         className="flex items-center justify-between border-2 border-rose-200/50 bg-white/60 rounded-xl px-4 py-3 hover:bg-white/80 transition-all"
                                     >
-                                        <span className="text-sm font-medium text-rose-800">{u.username}</span>
+                    <span className="text-sm font-medium text-rose-800">
+                      {u.username}
+                    </span>
                                         <button
                                             onClick={() => handleSendRequest(u.username)}
                                             className="text-xs font-semibold bg-gradient-to-r from-rose-500 to-pink-500 text-white px-4 py-1.5 rounded-lg hover:from-rose-600 hover:to-pink-600 shadow-md hover:scale-105 active:scale-95 transition-all"
@@ -302,13 +375,17 @@ export default function ProfilePage() {
                         <hr className="my-3" />
 
                         {requestsLoading ? (
-                            <p className="text-rose-600/70 text-sm text-center py-4">Loading requests...</p>
+                            <p className="text-rose-600/70 text-sm text-center py-4">
+                                Loading requests...
+                            </p>
                         ) : requestsError ? (
                             <div className="p-3 rounded-xl bg-red-50 border border-red-200">
                                 <p className="text-red-600 text-sm">{requestsError}</p>
                             </div>
                         ) : requests.length === 0 ? (
-                            <p className="text-rose-600/70 text-sm text-center py-4">No incoming requests.</p>
+                            <p className="text-rose-600/70 text-sm text-center py-4">
+                                No incoming requests.
+                            </p>
                         ) : (
                             <ul className="max-h-40 overflow-y-auto space-y-2">
                                 {requests.map((r) => (
@@ -316,9 +393,9 @@ export default function ProfilePage() {
                                         key={r.notification_id}
                                         className="flex items-center justify-between border-2 border-rose-200/50 bg-white/60 rounded-xl px-4 py-3 hover:bg-white/80 transition-all"
                                     >
-                                        <span className="text-sm font-medium text-rose-800">
-                                            {r.from_username}
-                                        </span>
+                    <span className="text-sm font-medium text-rose-800">
+                      {r.from_username}
+                    </span>
                                         <button
                                             onClick={() => handleAcceptRequest(r.notification_id)}
                                             className="text-xs font-semibold bg-gradient-to-r from-rose-500 to-pink-500 text-white px-4 py-1.5 rounded-lg hover:from-rose-600 hover:to-pink-600 shadow-md hover:scale-105 active:scale-95 transition-all"
@@ -364,4 +441,3 @@ export default function ProfilePage() {
         </main>
     );
 }
-
