@@ -1,4 +1,3 @@
-// src/components/comments/CommentsSection.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -31,7 +30,6 @@ export default function CommentsSection({ dateId }: Props) {
         }
     }, []);
 
-    // Load comments
     useEffect(() => {
         let cancelled = false;
 

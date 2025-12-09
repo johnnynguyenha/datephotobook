@@ -9,7 +9,6 @@ type CommentRow = {
     username: string;
 };
 
-// Helper to fetch date + owner + visibility
 async function getDateVisibility(dateId: string) {
     const { rows } = await pool.query(
         `
@@ -36,11 +35,6 @@ async function getDateVisibility(dateId: string) {
     } | undefined;
 }
 
-// ================================
-// GET /api/comments?dateId=UUID
-// (No permission restriction for reading;
-//  only writing is restricted per your rule.)
-// ================================
 export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url);
@@ -79,13 +73,6 @@ export async function GET(req: NextRequest) {
     }
 }
 
-// ================================
-// POST /api/comments
-// Body: { dateId, content, userId }
-// Rules:
-//   - Public date  (effective): anyone can comment
-//   - Private date (effective): only owner or partner can comment
-// ================================
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
@@ -106,7 +93,6 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Get date visibility + owner info
         const dateInfo = await getDateVisibility(dateId);
         if (!dateInfo) {
             return NextResponse.json(
@@ -122,22 +108,14 @@ export async function POST(req: NextRequest) {
             owner_partner_id,
         } = dateInfo;
 
-        // Compute effective visibility:
-        // PUBLIC if:
-        //   - date itself is PUBLIC
-        //   - OR date INHERIT + profile PUBLIC
         const isPublic =
             date_privacy === "PUBLIC" ||
             (date_privacy === "INHERIT" && profile_visibility === "PUBLIC");
 
-        // Private otherwise (date PRIVATE or INHERIT + profile PRIVATE)
         const isPrivate =
             date_privacy === "PRIVATE" ||
             (date_privacy === "INHERIT" && profile_visibility === "PRIVATE");
 
-        // Permission check:
-        //  - Public date: anyone can comment
-        //  - Private date: only owner or partner
         let allowed = false;
 
         if (isPublic) {

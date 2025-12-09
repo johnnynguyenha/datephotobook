@@ -33,6 +33,34 @@ async function getOrCreateProfileIdForUser(user_id: string): Promise<string> {
     return created.rows[0].profile_id as string;
 }
 
+async function canEditDate(date_id: string, user_id: string): Promise<boolean> {
+    const result = await pool.query(
+        `
+        SELECT
+          d.date_id,
+          p.user_id AS owner_user_id,
+          u.partner_id AS owner_partner_id
+        FROM dates d
+        JOIN profiles p ON d.profile_id = p.profile_id
+        JOIN users u ON p.user_id = u.user_id
+        WHERE d.date_id = $1
+        `,
+        [date_id]
+    );
+
+    if (result.rows.length === 0) return false;
+
+    const row = result.rows[0] as {
+        owner_user_id: string;
+        owner_partner_id: string | null;
+    };
+
+    if (row.owner_user_id === user_id) return true;
+    if (row.owner_partner_id && row.owner_partner_id === user_id) return true;
+
+    return false;
+}
+
 export async function GET(req: Request) {
     try {
         const { searchParams } = new URL(req.url);
@@ -40,16 +68,25 @@ export async function GET(req: Request) {
 
         let rows;
 
-
         if (userId && isValidUUID(userId)) {
             const result = await pool.query(
                 `
-                    SELECT d.*, p.user_id, p.visibility, ph.file_path AS image_path
+                    SELECT
+                        d.*,
+                        p.user_id,
+                        p.visibility,
+                        u.partner_id AS owner_partner_id,
+                        ph.file_path AS image_path
                     FROM dates d
                              JOIN profiles p ON d.profile_id = p.profile_id
+                             JOIN users u ON p.user_id = u.user_id
                              LEFT JOIN LATERAL (
-                        SELECT file_path FROM photos WHERE date_id = d.date_id ORDER BY uploaded_at ASC LIMIT 1
-    ) ph ON true
+                        SELECT file_path
+                        FROM photos
+                        WHERE date_id = d.date_id
+                        ORDER BY uploaded_at ASC
+                            LIMIT 1
+          ) ph ON true
                     WHERE
                         p.user_id = $1
                        OR d.privacy = 'PUBLIC'
@@ -62,12 +99,22 @@ export async function GET(req: Request) {
         } else {
             const result = await pool.query(
                 `
-                    SELECT d.*, p.user_id, p.visibility, ph.file_path AS image_path
+                    SELECT
+                        d.*,
+                        p.user_id,
+                        p.visibility,
+                        u.partner_id AS owner_partner_id,
+                        ph.file_path AS image_path
                     FROM dates d
                              JOIN profiles p ON d.profile_id = p.profile_id
+                             JOIN users u ON p.user_id = u.user_id
                              LEFT JOIN LATERAL (
-                        SELECT file_path FROM photos WHERE date_id = d.date_id ORDER BY uploaded_at ASC LIMIT 1
-    ) ph ON true
+                        SELECT file_path
+                        FROM photos
+                        WHERE date_id = d.date_id
+                        ORDER BY uploaded_at ASC
+                            LIMIT 1
+          ) ph ON true
                     WHERE
                         d.privacy = 'PUBLIC'
                        OR (d.privacy = 'INHERIT' AND p.visibility = 'PUBLIC')
@@ -86,6 +133,7 @@ export async function GET(req: Request) {
         );
     }
 }
+
 
 export async function POST(req: Request) {
     try {
@@ -175,7 +223,6 @@ export async function POST(req: Request) {
 
         const profile_id = await getOrCreateProfileIdForUser(user_id);
 
-
         const dateResult = await pool.query(
             `
                 INSERT INTO dates (profile_id, title, description, date_time, location, privacy)
@@ -222,6 +269,126 @@ export async function POST(req: Request) {
         console.error("Error creating date:", err);
         return NextResponse.json(
             { error: "Failed to create date" },
+            { status: 500 }
+        );
+    }
+}
+
+export async function PUT(req: Request) {
+    try {
+        const contentType = req.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+            return NextResponse.json(
+                { error: "Unsupported Content-Type. Use application/json." },
+                { status: 415 }
+            );
+        }
+
+        const data = await req.json();
+
+        let dateId: string | null =
+            (data.dateId ?? data.date_id ?? "").toString().trim() || null;
+        let userId: string | null =
+            (data.user_id ?? data.userId ?? "").toString().trim() || null;
+
+        const title: string | null | undefined = data.title;
+        const description: string | null | undefined = data.description;
+        const date_time: string | null | undefined = data.date_time;
+        const location: string | null | undefined = data.location;
+        const privacy: string | null | undefined = data.privacy;
+
+        if (!dateId) {
+            return NextResponse.json(
+                { error: "dateId (or date_id) is required" },
+                { status: 400 }
+            );
+        }
+        if (!userId) {
+            return NextResponse.json(
+                { error: "userId (or user_id) is required" },
+                { status: 400 }
+            );
+        }
+
+        if (!isValidUUID(dateId)) {
+            return NextResponse.json(
+                { error: `dateId is not a valid UUID: ${dateId}` },
+                { status: 400 }
+            );
+        }
+        if (!isValidUUID(userId)) {
+            return NextResponse.json(
+                { error: `userId is not a valid UUID: ${userId}` },
+                { status: 400 }
+            );
+        }
+
+        const allowed = await canEditDate(dateId, userId);
+        if (!allowed) {
+            return NextResponse.json(
+                { error: "You are not allowed to edit this date" },
+                { status: 403 }
+            );
+        }
+
+        const fields: string[] = [];
+        const values: any[] = [];
+        let idx = 1;
+
+        if (title !== undefined) {
+            fields.push(`title = $${idx++}`);
+            values.push(title);
+        }
+        if (description !== undefined) {
+            fields.push(`description = $${idx++}`);
+            values.push(description);
+        }
+        if (date_time !== undefined) {
+            fields.push(`date_time = $${idx++}`);
+            values.push(date_time);
+        }
+        if (location !== undefined) {
+            fields.push(`location = $${idx++}`);
+            values.push(location);
+        }
+        if (privacy !== undefined) {
+            fields.push(`privacy = $${idx++}`);
+            values.push(privacy);
+        }
+
+        if (fields.length === 0) {
+            return NextResponse.json(
+                { error: "Nothing to update" },
+                { status: 400 }
+            );
+        }
+
+        values.push(dateId);
+        const setClause = fields.join(", ");
+
+        const result = await pool.query(
+            `
+            UPDATE dates
+            SET ${setClause}
+            WHERE date_id = $${idx}
+            RETURNING *
+            `,
+            values
+        );
+
+        if (result.rows.length === 0) {
+            return NextResponse.json(
+                { error: "Date not found" },
+                { status: 404 }
+            );
+        }
+
+        const updated = result.rows[0];
+        return NextResponse.json(updated);
+    } catch (err) {
+        console.error("Error updating date:", err);
+        return NextResponse.json(
+            { error: "Failed to update date" },
             { status: 500 }
         );
     }

@@ -22,8 +22,16 @@ export default function DatesPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // NEW: which date card has its comments open
     const [openCommentsId, setOpenCommentsId] = useState<string | null>(null);
+
+    const [editingDate, setEditingDate] = useState<DateItem | null>(null);
+    const [editLoading, setEditLoading] = useState(false);
+    const [editError, setEditError] = useState<string | null>(null);
+    const [editTitle, setEditTitle] = useState("");
+    const [editDescription, setEditDescription] = useState("");
+    const [editLocation, setEditLocation] = useState("");
+    const [editPrivacy, setEditPrivacy] = useState<Privacy>("PUBLIC");
+    const [editDateTime, setEditDateTime] = useState("");
 
     useEffect(() => {
         if (typeof window !== "undefined") {
@@ -54,7 +62,9 @@ export default function DatesPage() {
                     throw new Error(data.error || "Failed to load dates");
                 }
 
-                const mine = (data as DateItem[]).filter((d) => d.user_id === userId);
+                const mine = (data as DateItem[]).filter(
+                    (d) => d.user_id === userId
+                );
 
                 if (isMounted) setDates(mine);
             } catch (err: any) {
@@ -72,9 +82,83 @@ export default function DatesPage() {
         };
     }, [userId]);
 
+    function openEditModal(date: DateItem) {
+        setEditingDate(date);
+        setEditError(null);
+
+        setEditTitle(date.title ?? "");
+        setEditDescription(date.description ?? "");
+        setEditLocation(date.location ?? "");
+
+        const effectivePrivacy: Privacy =
+            date.privacy === "INHERIT" ? "PUBLIC" : date.privacy;
+        setEditPrivacy(effectivePrivacy);
+
+        const dt = new Date(date.date_time);
+        const iso = dt.toISOString();
+        const local = iso.slice(0, 16);
+        setEditDateTime(local);
+    }
+
+    function closeEditModal() {
+        setEditingDate(null);
+        setEditError(null);
+    }
+
+    async function handleSaveEdit(e: React.FormEvent) {
+        e.preventDefault();
+        if (!editingDate || !userId) return;
+
+        try {
+            setEditLoading(true);
+            setEditError(null);
+
+            const res = await fetch("/api/dates", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    dateId: editingDate.date_id,
+                    userId,
+                    title: editTitle.trim() || null,
+                    description: editDescription.trim() || null,
+                    location: editLocation.trim() || null,
+                    privacy: editPrivacy,
+                    date_time: editDateTime || editingDate.date_time,
+                }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || "Failed to update date");
+            }
+
+            setDates((prev) =>
+                prev.map((d) =>
+                    d.date_id === editingDate.date_id
+                        ? {
+                            ...d,
+                            title: data.title,
+                            description: data.description,
+                            location: data.location,
+                            privacy: data.privacy,
+                            date_time: data.date_time,
+                        }
+                        : d
+                )
+            );
+
+            closeEditModal();
+        } catch (err: any) {
+            console.error(err);
+            setEditError(err.message || "Failed to update date");
+        } finally {
+            setEditLoading(false);
+        }
+    }
+
     return (
         <main className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-rose-100 flex flex-col items-center py-10 px-4 relative overflow-hidden">
-            {/* Decorative background elements */}
             <div className="absolute top-0 left-0 w-64 h-64 bg-rose-200/20 rounded-full blur-3xl animate-float"></div>
             <div
                 className="absolute bottom-0 right-0 w-96 h-96 bg-pink-200/20 rounded-full blur-3xl animate-float"
@@ -171,21 +255,29 @@ export default function DatesPage() {
                     {d.privacy === "PRIVATE" ? "🔒 Private" : "🌍 Public"}
                   </span>
 
-                                    {/* Toggle comments for this date */}
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setOpenCommentsId((prev) =>
-                                                prev === d.date_id ? null : d.date_id
-                                            )
-                                        }
-                                        className="text-xs font-medium text-rose-600 bg-rose-50/70 border border-rose-200/70 px-3 py-1.5 rounded-full hover:bg-rose-100 transition"
-                                    >
-                                        {commentsOpen ? "Hide comments" : "View comments"}
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => openEditModal(d)}
+                                            className="text-xs font-medium text-rose-600 bg-rose-50/70 border border-rose-200/70 px-3 py-1.5 rounded-full hover:bg-rose-100 transition"
+                                        >
+                                            Edit
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setOpenCommentsId((prev) =>
+                                                    prev === d.date_id ? null : d.date_id
+                                                )
+                                            }
+                                            className="text-xs font-medium text-rose-600 bg-rose-50/70 border border-rose-200/70 px-3 py-1.5 rounded-full hover:bg-rose-100 transition"
+                                        >
+                                            {commentsOpen ? "Hide comments" : "View comments"}
+                                        </button>
+                                    </div>
                                 </div>
 
-                                {/* Comments section for this date */}
                                 {commentsOpen && (
                                     <div className="mt-4">
                                         <CommentsSection dateId={d.date_id} />
@@ -195,6 +287,112 @@ export default function DatesPage() {
                         );
                     })}
                 </section>
+            )}
+
+            {editingDate && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+                    <div className="glass-strong rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-xl font-bold text-rose-900">
+                                Edit Date
+                            </h2>
+                            <button
+                                onClick={closeEditModal}
+                                className="text-2xl leading-none text-rose-400 hover:text-rose-600"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        {editError && (
+                            <p className="text-sm text-red-500">{editError}</p>
+                        )}
+
+                        <form onSubmit={handleSaveEdit} className="space-y-3">
+                            <div>
+                                <label className="block text-sm font-medium text-rose-800 mb-1">
+                                    Title
+                                </label>
+                                <input
+                                    type="text"
+                                    value={editTitle}
+                                    onChange={(e) => setEditTitle(e.target.value)}
+                                    className="w-full rounded-xl border border-rose-200 bg-white/80 px-3 py-2 text-sm text-black outline-none ring-rose-200 focus:ring"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-rose-800 mb-1">
+                                    Description
+                                </label>
+                                <textarea
+                                    value={editDescription}
+                                    onChange={(e) => setEditDescription(e.target.value)}
+                                    rows={3}
+                                    className="w-full rounded-xl border border-rose-200 bg-white/80 px-3 py-2 text-sm text-black outline-none ring-rose-200 focus:ring"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-rose-800 mb-1">
+                                    Date &amp; Time
+                                </label>
+                                <input
+                                    type="datetime-local"
+                                    value={editDateTime}
+                                    onChange={(e) => setEditDateTime(e.target.value)}
+                                    className="w-full rounded-xl border border-rose-200 bg-white/80 px-3 py-2 text-sm text-black outline-none ring-rose-200 focus:ring"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-rose-800 mb-1">
+                                    Location
+                                </label>
+                                <input
+                                    type="text"
+                                    value={editLocation}
+                                    onChange={(e) => setEditLocation(e.target.value)}
+                                    className="w-full rounded-xl border border-rose-200 bg-white/80 px-3 py-2 text-sm text-black outline-none ring-rose-200 focus:ring"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-rose-800 mb-1">
+                                    Privacy
+                                </label>
+                                <select
+                                    value={editPrivacy}
+                                    onChange={(e) =>
+                                        setEditPrivacy(e.target.value as Privacy)
+                                    }
+                                    className="w-full rounded-xl border border-rose-200 bg-white/80 px-3 py-2 text-sm text-black outline-none ring-rose-200 focus:ring"
+                                >
+                                    <option value="PUBLIC">Public</option>
+                                    <option value="PRIVATE">Private</option>
+                                </select>
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={closeEditModal}
+                                    className="px-4 py-2 rounded-xl border border-rose-200 text-sm text-rose-700 hover:bg-rose-50"
+                                    disabled={editLoading}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={editLoading}
+                                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-sm font-semibold text-white shadow-md hover:from-rose-600 hover:to-pink-600 disabled:opacity-60"
+                                >
+                                    {editLoading ? "Saving…" : "Save changes"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             )}
         </main>
     );
