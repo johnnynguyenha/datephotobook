@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import CommentsSection from "@/components/comments/CommentsSection";
 
 type Privacy = "PUBLIC" | "PRIVATE" | "INHERIT";
 
@@ -19,6 +20,9 @@ export default function DateGrid() {
     const [dates, setDates] = useState<DateItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // 🔹 which date’s comments are open in the grid
+    const [openCommentsId, setOpenCommentsId] = useState<string | null>(null);
 
     useEffect(() => {
         let isMounted = true;
@@ -78,10 +82,10 @@ export default function DateGrid() {
                 const raw = d.image_path?.toString().trim();
                 let imageSrc = "/images/heart.jpg";
                 if (raw && raw !== "null" && raw !== "undefined") {
-                    imageSrc = raw.startsWith("/")
-                        ? raw
-                        : `/images/${raw}`;
+                    imageSrc = raw.startsWith("/") ? raw : `/images/${raw}`;
                 }
+
+                const commentsOpen = openCommentsId === d.date_id;
 
                 return (
                     <article
@@ -125,15 +129,37 @@ export default function DateGrid() {
                             </p>
                         )}
 
-                        <span
-                            className={`mt-auto inline-flex items-center justify-center text-xs px-3 py-1.5 rounded-full font-semibold ${
-                                d.privacy === "PRIVATE"
-                                    ? "bg-rose-100/50 text-rose-600 border border-rose-200/50"
-                                    : "bg-gradient-to-r from-rose-400/20 to-pink-400/20 text-rose-600 border border-rose-300/50"
-                            }`}
-                        >
-                            {d.privacy === "PRIVATE" ? "🔒 Private" : "🌍 Public"}
-                        </span>
+                        {/* Privacy badge + comment toggle */}
+                        <div className="mt-auto flex items-center justify-between gap-2">
+              <span
+                  className={`inline-flex items-center justify-center text-xs px-3 py-1.5 rounded-full font-semibold ${
+                      d.privacy === "PRIVATE"
+                          ? "bg-rose-100/50 text-rose-600 border border-rose-200/50"
+                          : "bg-gradient-to-r from-rose-400/20 to-pink-400/20 text-rose-600 border border-rose-300/50"
+                  }`}
+              >
+                {d.privacy === "PRIVATE" ? "🔒 Private" : "🌍 Public"}
+              </span>
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setOpenCommentsId((prev) =>
+                                        prev === d.date_id ? null : d.date_id
+                                    )
+                                }
+                                className="text-xs font-medium text-rose-600 bg-rose-50/70 border border-rose-200/70 px-3 py-1.5 rounded-full hover:bg-rose-100 transition"
+                            >
+                                {commentsOpen ? "Hide comments" : "View comments"}
+                            </button>
+                        </div>
+
+                        {/* Comments for this date */}
+                        {commentsOpen && (
+                            <div className="mt-4">
+                                <CommentsSection dateId={d.date_id} />
+                            </div>
+                        )}
                     </article>
                 );
             })}
