@@ -35,17 +35,17 @@ const NAV_SECTIONS: { title?: string; items: Item[] }[] = [
             { label: "Profile", href: "/profile" },
             { label: "Settings", href: "/settings" },
             { label: "Notifications", href: "/notifications", badgeKey: "notifications" },
-            // href can be anything; we'll intercept by label
             { label: "Sign out", href: "#" },
         ],
     },
 ];
 
-
 export default function SidebarClient({ counts }: { counts?: NavCounts }) {
     const pathname = usePathname() || "/";
 
     const [open, setOpen] = useState(true);
+
+    const [sidebarWidth, setSidebarWidth] = useState<string>("280px");
 
     useEffect(() => {
         try {
@@ -64,7 +64,9 @@ export default function SidebarClient({ counts }: { counts?: NavCounts }) {
     const toggle = () => {
         const next = !open;
         setOpen(next);
-        try { localStorage.setItem("sidebar:open", next ? "1" : "0"); } catch {}
+        try {
+            localStorage.setItem("sidebar:open", next ? "1" : "0");
+        } catch {}
     };
 
     useEffect(() => {
@@ -80,6 +82,30 @@ export default function SidebarClient({ counts }: { counts?: NavCounts }) {
         }
     }, [pathname]);
 
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+
+        const updateWidth = () => {
+            const w = window.innerWidth;
+
+            let width: string;
+            if (w <= 480) {
+                // tiny window – use a big percentage
+                width = `${Math.round(w * 0.8)}px`;
+            } else if (w <= 900) {
+                width = `${Math.round(w * 0.25)}px`;
+            } else {
+                width = `${Math.min(320, Math.round(w * 0.2))}px`;
+            }
+
+            setSidebarWidth(width);
+        };
+
+        updateWidth();
+        window.addEventListener("resize", updateWidth);
+        return () => window.removeEventListener("resize", updateWidth);
+    }, []);
+
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
     const handleSignOut = () => {
@@ -92,9 +118,6 @@ export default function SidebarClient({ counts }: { counts?: NavCounts }) {
         window.dispatchEvent(new Event("authchange"));
         window.location.replace("/login");
     };
-
-
-
 
     return (
         <>
@@ -117,24 +140,23 @@ export default function SidebarClient({ counts }: { counts?: NavCounts }) {
             </button>
 
             <aside
+                style={{ width: sidebarWidth, maxWidth: "90vw" }}
                 className={clsx(
-                    "fixed top-0 left-0 z-40 h-full w-72 glass-strong border-r border-rose-100/50 transition-all duration-300 ease-out shadow-xl",
+                    "fixed top-0 left-0 z-40 h-screen glass-strong border-r border-rose-100/50 transition-all duration-300 ease-out shadow-xl flex flex-col",
                     open ? "translate-x-0" : "-translate-x-full"
                 )}
             >
-                <div className="p-6 pt-16 border-b border-rose-100/50">
+                <div className="p-6 pt-16 border-b border-rose-100/50 flex-none">
                     <Link
                         href="/profile"
                         className="block group"
-                        title="Date Photo Book"
                         onClick={() => setOpen(false)}
                     >
-                        <h1 className="text-2xl font-bold bg-gradient-to-r from-rose-400 via-pink-500 to-rose-600 bg-clip-text text-transparent group-hover:scale-105 transition-transform inline-block">
+                        <h1 className="text-2xl font-bold bg-gradient-to-r from-rose-400 via-pink-500 to-rose-600 bg-clip-text text-transparent group-hover:scale-105 transition-transform">
                             Date Photo Book
                         </h1>
                         <p className="text-sm text-rose-400/70 mt-1 flex items-center gap-1">
-                            <span>💕</span>
-                            Capture every date
+                            <span>💕</span> Capture every date
                         </p>
                     </Link>
                 </div>
@@ -147,10 +169,16 @@ export default function SidebarClient({ counts }: { counts?: NavCounts }) {
                                     {section.title}
                                 </div>
                             )}
+
                             <ul className="space-y-1.5">
                                 {section.items.map((item) => {
-                                    const active = pathname === item.href || pathname.startsWith(item.href + "/");
-                                    const badge = item.badgeKey && counts?.[item.badgeKey] ? counts[item.badgeKey] : null;
+                                    const active =
+                                        pathname === item.href ||
+                                        pathname.startsWith(item.href + "/");
+                                    const badge =
+                                        item.badgeKey && counts?.[item.badgeKey]
+                                            ? counts[item.badgeKey]
+                                            : null;
 
                                     if (item.label === "Sign out") {
                                         return (
@@ -216,7 +244,6 @@ export default function SidebarClient({ counts }: { counts?: NavCounts }) {
                 </div>
             </aside>
 
-            {/* Logout Confirmation Modal */}
             {showLogoutConfirm && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="glass-strong rounded-3xl shadow-2xl max-w-sm w-full p-6 space-y-5 animate-slide-in">
