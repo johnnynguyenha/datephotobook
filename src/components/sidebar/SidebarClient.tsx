@@ -43,23 +43,21 @@ const NAV_SECTIONS: { title?: string; items: Item[] }[] = [
 export default function SidebarClient({ counts }: { counts?: NavCounts }) {
     const pathname = usePathname() || "/";
 
-    const [open, setOpen] = useState(true);
-
-    const [sidebarWidth, setSidebarWidth] = useState<string>("280px");
-
-    useEffect(() => {
+    const [open, setOpen] = useState(() => {
+        if (typeof window === "undefined") return true;
         try {
             const saved = localStorage.getItem("sidebar:open");
             if (saved === null) {
                 localStorage.setItem("sidebar:open", "1");
-                setOpen(true);
-            } else {
-                setOpen(saved !== "0");
+                return true;
             }
+            return saved !== "0";
         } catch {
-            setOpen(true);
+            return true;
         }
-    }, []);
+    });
+
+    const [sidebarWidth, setSidebarWidth] = useState<string>("280px");
 
     const toggle = () => {
         const next = !open;
@@ -68,19 +66,6 @@ export default function SidebarClient({ counts }: { counts?: NavCounts }) {
             localStorage.setItem("sidebar:open", next ? "1" : "0");
         } catch {}
     };
-
-    useEffect(() => {
-        const isAuth = ["/login", "/signin", "/register", "/signup", "/forgot", "/reset", "/verify"]
-            .some(p => pathname === p || pathname.startsWith(p + "/"));
-        if (!isAuth) {
-            try {
-                const saved = localStorage.getItem("sidebar:open");
-                if (saved === "0") return;
-                setOpen(true);
-                localStorage.setItem("sidebar:open", "1");
-            } catch {}
-        }
-    }, [pathname]);
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -150,7 +135,6 @@ export default function SidebarClient({ counts }: { counts?: NavCounts }) {
                     <Link
                         href="/profile"
                         className="block group"
-                        onClick={() => setOpen(false)}
                     >
                         <h1 className="text-2xl font-bold bg-gradient-to-r from-rose-400 via-pink-500 to-rose-600 bg-clip-text text-transparent group-hover:scale-105 transition-transform">
                             Date Photo Book
@@ -208,7 +192,6 @@ export default function SidebarClient({ counts }: { counts?: NavCounts }) {
                                                         ? "bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-lg shadow-rose-200/50 scale-[1.02]"
                                                         : "text-rose-700/70 hover:bg-rose-50/70 hover:text-rose-800"
                                                 )}
-                                                onClick={() => setOpen(false)}
                                             >
                                                 <div className="flex items-center gap-3 min-w-0">
                                                     <span
