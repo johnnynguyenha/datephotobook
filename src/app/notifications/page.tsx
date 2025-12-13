@@ -524,7 +524,11 @@ export default function NotificationsPage() {
                                 if (isPartnerRequest) return null;
 
                                 const isCommentNotification = notification.type === "COMMENT" && notification.message.date_id;
-                                const handleNotificationClick = () => {
+                                const handleNotificationClick = (e: React.MouseEvent) => {
+                                    // don't trigger if clicking on action buttons
+                                    if ((e.target as HTMLElement).closest('button')) {
+                                        return;
+                                    }
                                     if (isCommentNotification && notification.message.date_id) {
                                         // mark as read if unread
                                         if (!notification.read) {
@@ -539,23 +543,17 @@ export default function NotificationsPage() {
                                     }
                                 };
 
-                                const NotificationWrapper = isCommentNotification ? "button" : "div";
-                                const wrapperProps = isCommentNotification 
-                                    ? { onClick: handleNotificationClick, type: "button" as const }
-                                    : {};
-
                                 return (
                                     <li
                                         key={notification.id}
-                                        className={`${isCommentNotification ? "cursor-pointer" : ""}`}
                                     >
-                                        <NotificationWrapper
-                                            {...wrapperProps}
+                                        <div
+                                            onClick={isCommentNotification ? handleNotificationClick : undefined}
                                             className={`w-full p-5 rounded-2xl border-2 flex gap-4 transition-all hover:scale-[1.01] animate-fade-in group ${
                                                 notification.read
                                                     ? "bg-white/70 border-rose-200/50"
                                                     : "bg-white border-rose-300/50 shadow-md"
-                                            } ${isCommentNotification ? "hover:border-rose-400" : ""}`}
+                                            } ${isCommentNotification ? "hover:border-rose-400 cursor-pointer" : ""}`}
                                             style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
                                         >
                                         <span
@@ -601,7 +599,7 @@ export default function NotificationsPage() {
                                                 {actionLoading === notification.id ? "..." : "✕"}
                                             </button>
                                         </div>
-                                        </NotificationWrapper>
+                                        </div>
                                     </li>
                                 );
                             })}
