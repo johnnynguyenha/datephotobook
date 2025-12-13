@@ -8,7 +8,6 @@ import clsx from "clsx";
 export type NavCounts = {
     dates?: number;
     photos?: number;
-    albums?: number;
     notifications?: number;
 };
 
@@ -26,7 +25,6 @@ const NAV_SECTIONS: { title?: string; items: Item[] }[] = [
         items: [
             { label: "Dates", href: "/dates", badgeKey: "dates" },
             { label: "Photos", href: "/photos", badgeKey: "photos" },
-            { label: "Albums", href: "/albums", badgeKey: "albums" },
         ],
     },
     {
