@@ -4,6 +4,14 @@ import { useEffect, useState } from "react";
 import CommentsSection from "@/components/comments/CommentsSection";
 import { getCachedData, setCachedData } from "@/lib/cache";
 
+type ProfileData = {
+    user_name: string;
+    partner_name?: string | null;
+    partner_id?: string | null;
+    display_name?: string | null;
+    theme_setting?: string | null;
+};
+
 type Privacy = "PUBLIC" | "PRIVATE" | "INHERIT";
 
 type DateItem = {
@@ -45,6 +53,23 @@ export default function DatesPage() {
     }, []);
 
     useEffect(() => {
+        const handleAuthChange = () => {
+            if (typeof window !== "undefined") {
+                const id = localStorage.getItem("userId");
+                setUserId(id);
+            }
+        };
+
+        window.addEventListener("authchange", handleAuthChange as EventListener);
+        window.addEventListener("storage", handleAuthChange);
+
+        return () => {
+            window.removeEventListener("authchange", handleAuthChange as EventListener);
+            window.removeEventListener("storage", handleAuthChange);
+        };
+    }, []);
+
+    useEffect(() => {
         if (!userId) {
             setLoading(false);
             return;
@@ -55,10 +80,31 @@ export default function DatesPage() {
         async function load() {
             if (!userId) return;
             try {
+                // Fetch profile first to get partner_id - always fetch fresh to ensure we have latest partner_id
+                let profileData: ProfileData | null = null;
+                const profileRes = await fetch(`/api/profile?user_id=${userId}`);
+                if (profileRes.ok) {
+                    profileData = await profileRes.json();
+                    if (profileData) {
+                        setCachedData("profile", userId, profileData);
+                    }
+                }
+
+                // Fallback to cache if fetch failed
+                if (!profileData) {
+                    profileData = getCachedData<ProfileData>("profile", userId);
+                }
+
+                const partnerId = profileData?.partner_id;
+
                 // Check cache first
                 const cached = getCachedData<DateItem[]>("dates", userId);
                 if (cached && isMounted) {
-                    const mine = cached.filter((d) => d.user_id === userId);
+                    // Filter to only show dates that belong to the user or their partner
+                    const mine = cached.filter((d) => 
+                        d.user_id && 
+                        (d.user_id === userId || (partnerId && d.user_id === partnerId))
+                    );
                     setDates(mine);
                     setLoading(false);
                     // Still fetch in background to update cache
@@ -67,7 +113,11 @@ export default function DatesPage() {
                         .then(data => {
                             if (data && !data.error && Array.isArray(data) && userId) {
                                 setCachedData("dates", userId, data);
-                                const mine = data.filter((d: DateItem) => d.user_id === userId);
+                                // Filter to only show dates that belong to the user or their partner
+                                const mine = data.filter((d: DateItem) => 
+                                    d.user_id && 
+                                    (d.user_id === userId || (partnerId && d.user_id === partnerId))
+                                );
                                 if (isMounted) setDates(mine);
                             }
                         })
@@ -87,8 +137,10 @@ export default function DatesPage() {
                     throw new Error(data.error || "Failed to load dates");
                 }
 
+                // Filter to only show dates that belong to the user or their partner
                 const mine = (data as DateItem[]).filter(
-                    (d) => d.user_id === userId
+                    (d) => d.user_id && 
+                        (d.user_id === userId || (partnerId && d.user_id === partnerId))
                 );
 
                 if (isMounted && userId) {

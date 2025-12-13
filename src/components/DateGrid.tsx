@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import CommentsSection from "@/components/comments/CommentsSection";
 import { getCachedData, setCachedData } from "@/lib/cache";
 
@@ -18,6 +18,14 @@ type DateItem = {
     owner_partner_id?: string | null;
 };
 
+type ProfileData = {
+    user_name: string;
+    partner_name?: string | null;
+    partner_id?: string | null;
+    display_name?: string | null;
+    theme_setting?: string | null;
+};
+
 export default function DateGrid() {
     const [dates, setDates] = useState<DateItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -25,6 +33,8 @@ export default function DateGrid() {
 
     const [openCommentsId, setOpenCommentsId] = useState<string | null>(null);
     const [viewerId, setViewerId] = useState<string | null>(null);
+    const [partnerId, setPartnerId] = useState<string | null>(null);
+    const previousUserIdRef = useRef<string | null>(null);
 
     // edit state
     const [editingDate, setEditingDate] = useState<DateItem | null>(null);
@@ -41,44 +51,98 @@ export default function DateGrid() {
     const [deleteLoading, setDeleteLoading] = useState(false);
 
     useEffect(() => {
+        if (typeof window !== "undefined") {
+            const id = localStorage.getItem("userId");
+            setViewerId(id);
+        }
+    }, []);
+
+    useEffect(() => {
+        const handleAuthChange = () => {
+            if (typeof window !== "undefined") {
+                const id = localStorage.getItem("userId");
+                setViewerId(id);
+            }
+        };
+
+        window.addEventListener("authchange", handleAuthChange as EventListener);
+        window.addEventListener("storage", handleAuthChange);
+
+        return () => {
+            window.removeEventListener("authchange", handleAuthChange as EventListener);
+            window.removeEventListener("storage", handleAuthChange);
+        };
+    }, []);
+
+    useEffect(() => {
         let isMounted = true;
 
         async function load() {
             try {
-                let userId: string | null = null;
-                if (typeof window !== "undefined") {
-                    userId = localStorage.getItem("userId");
-                    setViewerId(userId);
+                const userId = viewerId;
+                
+                if (!userId) {
+                    setLoading(false);
+                    return;
                 }
 
-                // Check cache first
-                if (userId) {
-                    const cached = getCachedData<DateItem[]>("dates", userId);
-                    if (cached && isMounted) {
-                        setDates(cached);
-                        setLoading(false);
-                        // Still fetch in background to update cache
-                        fetch(`/api/dates?user_id=${encodeURIComponent(userId)}`)
-                            .then(res => res.json())
-                            .then(data => {
-                                if (data && !data.error && Array.isArray(data) && isMounted) {
-                                    setCachedData("dates", userId, data);
-                                    setDates(data);
-                                }
-                            })
-                            .catch(() => {});
-                        return;
+                // Only clear dates if userId actually changed
+                if (previousUserIdRef.current && previousUserIdRef.current !== userId) {
+                    // userId changed, don't clear dates here - let React's key-based reconciliation handle it
+                }
+                previousUserIdRef.current = userId;
+
+                // Fetch profile first to get partner_id
+                const cachedProfile = getCachedData<ProfileData>("profile", userId);
+                let profileData: ProfileData | null = cachedProfile;
+                
+                if (!cachedProfile) {
+                    const profileRes = await fetch(`/api/profile?user_id=${userId}`);
+                    if (profileRes.ok) {
+                        profileData = await profileRes.json();
+                        if (profileData) {
+                            setCachedData("profile", userId, profileData);
+                        }
                     }
+                }
+
+                if (profileData?.partner_id && isMounted) {
+                    setPartnerId(profileData.partner_id);
+                }
+
+                // Check cache first for dates
+                const cached = getCachedData<DateItem[]>("dates", userId);
+                if (cached && isMounted) {
+                    // Filter to only show dates that belong to the user or their partner
+                    const pid = profileData?.partner_id;
+                    const myDates = cached.filter((d) => 
+                        d.user_id && 
+                        (d.user_id === userId || (pid && d.user_id === pid))
+                    );
+                    setDates(myDates);
+                    setLoading(false);
+                    // Still fetch in background to update cache
+                    fetch(`/api/dates?user_id=${encodeURIComponent(userId)}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data && !data.error && Array.isArray(data) && isMounted) {
+                                setCachedData("dates", userId, data);
+                                const pid = profileData?.partner_id;
+                                const myDates = data.filter((d: DateItem) => 
+                                    d.user_id && 
+                                    (d.user_id === userId || (pid && d.user_id === pid))
+                                );
+                                setDates(myDates);
+                            }
+                        })
+                        .catch(() => {});
+                    return;
                 }
 
                 setLoading(true);
                 setError(null);
 
-                const url = userId
-                    ? `/api/dates?user_id=${encodeURIComponent(userId)}`
-                    : "/api/dates";
-
-                const res = await fetch(url);
+                const res = await fetch(`/api/dates?user_id=${encodeURIComponent(userId)}`);
                 const data = await res.json();
 
                 if (!res.ok) {
@@ -86,7 +150,13 @@ export default function DateGrid() {
                 }
 
                 if (isMounted) {
-                    setDates(data);
+                    // Filter to only show dates that belong to the user or their partner
+                    const pid = profileData?.partner_id;
+                    const myDates = data.filter((d: DateItem) => 
+                        d.user_id && 
+                        (d.user_id === userId || (pid && d.user_id === pid))
+                    );
+                    setDates(myDates);
                     if (userId) {
                         setCachedData("dates", userId, data);
                     }
@@ -104,7 +174,7 @@ export default function DateGrid() {
         return () => {
             isMounted = false;
         };
-    }, []);
+    }, [viewerId]);
 
     function openEditModal(date: DateItem) {
         if (!viewerId) return;

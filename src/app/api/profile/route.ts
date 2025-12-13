@@ -14,6 +14,7 @@ export async function GET(req: Request) {
       SELECT 
         u.username AS user_name,
         u.email,
+        u.partner_id,
         p.username AS partner_name,
         pr.theme_setting,
         pr.display_name

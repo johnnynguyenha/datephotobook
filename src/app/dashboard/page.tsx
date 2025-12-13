@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { getCachedData, setCachedData } from "@/lib/cache";
 
 type DateItem = {
     date_id: string;
@@ -11,6 +12,7 @@ type DateItem = {
     location: string | null;
     privacy: "PUBLIC" | "PRIVATE" | "INHERIT";
     image_path?: string | null;
+    user_id?: string;
 };
 
 type PhotoItem = {
@@ -18,11 +20,13 @@ type PhotoItem = {
     file_path: string;
     date_title: string | null;
     uploaded_at: string;
+    user_id?: string;
 };
 
 type ProfileData = {
     user_name: string;
     partner_name?: string | null;
+    partner_id?: string | null;
     display_name?: string | null;
 };
 
@@ -62,28 +66,124 @@ export default function DashboardPage() {
         }
 
         async function loadDashboardData() {
+            if (!userId) return;
             try {
-                setLoading(true);
+                // check cache first: profile, dates, and photos
+                const cachedProfile = getCachedData<ProfileData>("profile", userId);
+                let profileData: ProfileData | null = cachedProfile;
 
-                // Fetch all data in parallel
-                const [profileRes, datesRes, photosRes] = await Promise.all([
-                    fetch(`/api/profile?user_id=${userId}`),
-                    fetch(`/api/dates?user_id=${userId}`),
-                    fetch(`/api/photos?user_id=${userId}`),
-                ]);
-
-                // Process profile
-                if (profileRes.ok) {
-                    const profileData = await profileRes.json();
-                    setProfile(profileData);
+                if (!cachedProfile) {
+                    setLoading(true);
+                    const profileRes = await fetch(`/api/profile?user_id=${userId}`);
+                    if (profileRes.ok) {
+                        profileData = await profileRes.json();
+                        setProfile(profileData);
+                        if (profileData) {
+                            setCachedData("profile", userId, profileData);
+                        }
+                    }
+                } else {
+                    setProfile(cachedProfile);
                 }
 
-                // Process dates
-                if (datesRes.ok) {
-                    const datesData: DateItem[] = await datesRes.json();
-                    const myDates = datesData.filter((d) => d.date_id);
+                // check cache for dates and photos
+                const cachedDates = getCachedData<DateItem[]>("dates", userId);
+                const cachedPhotos = getCachedData<PhotoItem[]>("photos", userId);
+
+                let datesData: DateItem[] = [];
+                let photosData: PhotoItem[] = [];
+
+                if (cachedDates && cachedPhotos) {
+                    //use cached data
+                    datesData = cachedDates;
+                    photosData = cachedPhotos;
+                    setLoading(false);
                     
-                    // Sort by date_time descending for recent
+                    // process cached dates
+                    const partnerId = profileData?.partner_id;
+                    const myDates = datesData.filter((d) => 
+                        d.date_id && 
+                        d.user_id && 
+                        (d.user_id === userId || (partnerId && d.user_id === partnerId))
+                    );
+                    
+                    const sorted = [...myDates].sort(
+                        (a, b) => new Date(b.date_time).getTime() - new Date(a.date_time).getTime()
+                    );
+                    setRecentDates(sorted.slice(0, 4));
+
+                    const now = new Date();
+                    const upcoming = myDates.filter((d) => new Date(d.date_time) > now);
+                    const publicDates = myDates.filter((d) => d.privacy === "PUBLIC");
+                    const privateDates = myDates.filter((d) => d.privacy === "PRIVATE");
+
+                    setStats({
+                        totalDates: myDates.length,
+                        upcomingDates: upcoming.length,
+                        publicDates: publicDates.length,
+                        privateDates: privateDates.length,
+                        totalPhotos: 0,
+                    });
+
+                    // process cached photos
+                    const myPhotos = photosData.filter((p) => 
+                        p.user_id && 
+                        (p.user_id === userId || (partnerId && p.user_id === partnerId))
+                    );
+                    const sortedPhotos = [...myPhotos].sort(
+                        (a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
+                    );
+                    setRecentPhotos(sortedPhotos.slice(0, 6));
+                    setStats((prev) => ({ ...prev, totalPhotos: myPhotos.length }));
+
+                    // fetch in background to update cache
+                    Promise.all([
+                        fetch(`/api/dates?user_id=${userId}`).then(res => res.ok ? res.json() : null),
+                        fetch(`/api/photos?user_id=${userId}`).then(res => res.ok ? res.json() : null),
+                    ]).then(([dates, photos]) => {
+                        if (dates && Array.isArray(dates)) {
+                            setCachedData("dates", userId, dates);
+                        }
+                        if (photos && Array.isArray(photos)) {
+                            setCachedData("photos", userId, photos);
+                        }
+                    }).catch(() => {});
+                    return;
+                }
+
+                setLoading(true);
+
+                // fetch dates and photos if not cached
+                let datesRes: Response | null = null;
+                let photosRes: Response | null = null;
+
+                if (!cachedDates) {
+                    datesRes = await fetch(`/api/dates?user_id=${userId}`);
+                }
+                if (!cachedPhotos) {
+                    photosRes = await fetch(`/api/photos?user_id=${userId}`);
+                }
+
+                // process dates
+                if (datesRes && datesRes.ok) {
+                    datesData = await datesRes.json();
+                    if (datesData && Array.isArray(datesData)) {
+                        setCachedData("dates", userId, datesData);
+                    }
+                } else if (cachedDates) {
+                    datesData = cachedDates;
+                }
+
+                if (datesData.length > 0 || cachedDates) {
+                    // filter to only show dates that belong to the user or partner
+                    const partnerId = profileData?.partner_id;
+                    const myDates = datesData.filter((d) => 
+                        d.date_id && 
+                        d.user_id && 
+                        (d.user_id === userId || (partnerId && d.user_id === partnerId))
+                    );
+                    
+                    // sort by date_time, descending for recent
                     const sorted = [...myDates].sort(
                         (a, b) => new Date(b.date_time).getTime() - new Date(a.date_time).getTime()
                     );
@@ -104,14 +204,28 @@ export default function DashboardPage() {
                     }));
                 }
 
-                // Process photos
-                if (photosRes.ok) {
-                    const photosData: PhotoItem[] = await photosRes.json();
-                    const sorted = [...photosData].sort(
+                // process photos
+                if (photosRes && photosRes.ok) {
+                    photosData = await photosRes.json();
+                    if (photosData && Array.isArray(photosData)) {
+                        setCachedData("photos", userId, photosData);
+                    }
+                } else if (cachedPhotos) {
+                    photosData = cachedPhotos;
+                }
+
+                if (photosData.length > 0 || cachedPhotos) {
+                    // filter to only show photos that belong to the user or partner
+                    const partnerId = profileData?.partner_id;
+                    const myPhotos = photosData.filter((p) => 
+                        p.user_id && 
+                        (p.user_id === userId || (partnerId && p.user_id === partnerId))
+                    );
+                    const sorted = [...myPhotos].sort(
                         (a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
                     );
                     setRecentPhotos(sorted.slice(0, 6));
-                    setStats((prev) => ({ ...prev, totalPhotos: photosData.length }));
+                    setStats((prev) => ({ ...prev, totalPhotos: myPhotos.length }));
                 }
             } catch (err) {
                 console.error("Failed to load dashboard data:", err);
@@ -167,7 +281,7 @@ export default function DashboardPage() {
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                         <div>
                             <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent">
-                                {getGreeting()}, {profile?.display_name || profile?.user_name || "there"}! 💕
+                                {getGreeting()}, {profile?.user_name?.split(" ")[0] || "there"}!
                             </h1>
                             <p className="text-rose-600/70 mt-2">
                                 {profile?.partner_name 
