@@ -51,7 +51,7 @@ export default function NotificationsPage() {
             <div className="absolute bottom-0 right-0 w-96 h-96 bg-pink-200/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '1.5s' }}></div>
             
             <div className="w-full max-w-3xl space-y-6 relative z-10">
-                <header className={`${CARD_CLASS} p-8 animate-slide-in`}>
+                <header className={`${CARD_CLASS} p-8`}>
                     <h1 className="text-4xl font-bold bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent mb-2">
                         Notifications
                     </h1>
@@ -60,7 +60,7 @@ export default function NotificationsPage() {
                     </p>
                 </header>
 
-                <section className={`${CARD_CLASS} p-8 animate-slide-in`} style={{ animationDelay: '100ms' }}>
+                <section className={`${CARD_CLASS} p-8`}>
                     <div className="flex flex-wrap items-center gap-4 mb-6">
                         <button className="rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white px-5 py-2 text-sm font-semibold shadow-lg shadow-rose-200/50 hover:from-rose-600 hover:to-pink-600 hover:scale-105 active:scale-95 transition-all">
                             Mark all read
@@ -73,12 +73,12 @@ export default function NotificationsPage() {
                         {NOTIFICATIONS.map((item, index) => (
                             <li
                                 key={item.id}
-                                className={`p-5 rounded-2xl border-2 flex gap-4 transition-all hover:scale-[1.01] animate-slide-in ${
+                                className={`p-5 rounded-2xl border-2 flex gap-4 transition-all hover:scale-[1.01] animate-fade-in ${
                                     item.unread
                                         ? "bg-white border-rose-300/50 shadow-md"
                                         : "bg-white/70 border-rose-200/50"
                                 }`}
-                                style={{ animationDelay: `${(index + 1) * 100}ms` }}
+                                style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
                             >
                                 <span
                                     className={`mt-1 inline-flex h-12 w-12 items-center justify-center rounded-full text-lg font-semibold ring-2 ${TYPE_COLORS[item.type]} flex-shrink-0`}

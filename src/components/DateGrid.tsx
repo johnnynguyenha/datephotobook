@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import CommentsSection from "@/components/comments/CommentsSection";
+import { getCachedData, setCachedData } from "@/lib/cache";
 
 type Privacy = "PUBLIC" | "PRIVATE" | "INHERIT";
 
@@ -40,14 +41,34 @@ export default function DateGrid() {
 
         async function load() {
             try {
-                setLoading(true);
-                setError(null);
-
                 let userId: string | null = null;
                 if (typeof window !== "undefined") {
                     userId = localStorage.getItem("userId");
                     setViewerId(userId);
                 }
+
+                // Check cache first
+                if (userId) {
+                    const cached = getCachedData<DateItem[]>("dates", userId);
+                    if (cached && isMounted) {
+                        setDates(cached);
+                        setLoading(false);
+                        // Still fetch in background to update cache
+                        fetch(`/api/dates?user_id=${encodeURIComponent(userId)}`)
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data && !data.error && Array.isArray(data) && isMounted) {
+                                    setCachedData("dates", userId, data);
+                                    setDates(data);
+                                }
+                            })
+                            .catch(() => {});
+                        return;
+                    }
+                }
+
+                setLoading(true);
+                setError(null);
 
                 const url = userId
                     ? `/api/dates?user_id=${encodeURIComponent(userId)}`
@@ -60,7 +81,12 @@ export default function DateGrid() {
                     throw new Error(data.error || "Failed to load dates");
                 }
 
-                if (isMounted) setDates(data);
+                if (isMounted) {
+                    setDates(data);
+                    if (userId) {
+                        setCachedData("dates", userId, data);
+                    }
+                }
             } catch (err: any) {
                 console.error(err);
                 if (isMounted) setError(err.message || "Failed to load dates");

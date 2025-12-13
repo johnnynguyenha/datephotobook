@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import CommentsSection from "@/components/comments/CommentsSection";
+import { getCachedData, setCachedData } from "@/lib/cache";
 
 type Privacy = "PUBLIC" | "PRIVATE" | "INHERIT";
 
@@ -49,7 +50,28 @@ export default function DatesPage() {
         let isMounted = true;
 
         async function load() {
+            if (!userId) return;
             try {
+                // Check cache first
+                const cached = getCachedData<DateItem[]>("dates", userId);
+                if (cached && isMounted) {
+                    const mine = cached.filter((d) => d.user_id === userId);
+                    setDates(mine);
+                    setLoading(false);
+                    // Still fetch in background to update cache
+                    fetch(`/api/dates?user_id=${encodeURIComponent(userId)}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data && !data.error && Array.isArray(data) && userId) {
+                                setCachedData("dates", userId, data);
+                                const mine = data.filter((d: DateItem) => d.user_id === userId);
+                                if (isMounted) setDates(mine);
+                            }
+                        })
+                        .catch(() => {});
+                    return;
+                }
+
                 setLoading(true);
                 setError(null);
 
@@ -66,7 +88,10 @@ export default function DatesPage() {
                     (d) => d.user_id === userId
                 );
 
-                if (isMounted) setDates(mine);
+                if (isMounted && userId) {
+                    setDates(mine);
+                    setCachedData("dates", userId, data);
+                }
             } catch (err: any) {
                 console.error(err);
                 if (isMounted) setError(err.message || "Failed to load dates");
@@ -206,7 +231,6 @@ export default function DatesPage() {
                             <article
                                 key={d.date_id}
                                 className="glass-strong rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-5 flex flex-col overflow-hidden hover:scale-[1.02] animate-slide-in"
-                                style={{ animationDelay: `${index * 100}ms` }}
                             >
                                 <div className="relative w-full h-52 mb-4 overflow-hidden rounded-xl group">
                                     <img

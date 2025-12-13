@@ -1,8 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getCachedData, setCachedData } from "@/lib/cache";
 
-type ToggleKey = "email" | "sms" | "push" | "digest";
+type ProfileData = {
+    user_name: string;
+    email?: string;
+    partner_name?: string | null;
+    display_name?: string | null;
+    theme_setting?: string | null;
+};
 
 const CARD_CLASS =
     "glass-strong shadow-xl rounded-3xl border border-rose-100/50";
@@ -57,7 +64,7 @@ function PasswordSettingsCard() {
     }
 
     return (
-        <section className={`${CARD_CLASS} p-8 animate-slide-in`} style={{ animationDelay: "400ms" }}>
+        <section className={`${CARD_CLASS} p-8 animate-slide-in`}>
             <h2 className="text-2xl font-bold text-rose-700 mb-2">
                 Account security
             </h2>
@@ -119,16 +126,66 @@ function PasswordSettingsCard() {
 }
 
 export default function SettingsPage() {
-    const [toggles, setToggles] = useState<Record<ToggleKey, boolean>>({
-        email: true,
-        sms: false,
-        push: true,
-        digest: false,
+    const [userId, setUserId] = useState<string | null>(() => {
+        if (typeof window !== "undefined") {
+            return localStorage.getItem("userId");
+        }
+        return null;
     });
+    const [profile, setProfile] = useState<ProfileData | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [notifications, setNotifications] = useState(true);
 
-    const toggle = (key: ToggleKey) => {
-        setToggles((prev) => ({ ...prev, [key]: !prev[key] }));
-    };
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const id = localStorage.getItem("userId");
+            setUserId(id);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!userId) {
+            setLoading(false);
+            return;
+        }
+
+        async function load() {
+            if (!userId) return;
+            try {
+                // Check cache first
+                const cached = getCachedData<ProfileData>("profile", userId);
+                if (cached) {
+                    setProfile(cached);
+                    setLoading(false);
+                    // Still fetch in background to update cache
+                    fetch(`/api/profile?user_id=${encodeURIComponent(userId)}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data && !data.error) {
+                                setCachedData("profile", userId, data);
+                                setProfile(data);
+                            }
+                        })
+                        .catch(() => {});
+                    return;
+                }
+
+                setLoading(true);
+                const res = await fetch(`/api/profile?user_id=${encodeURIComponent(userId)}`);
+                const data = await res.json();
+                if (res.ok && data) {
+                    setProfile(data);
+                    setCachedData("profile", userId, data);
+                }
+            } catch (err) {
+                console.error("failed to load profile:", err);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        load();
+    }, [userId]);
 
     return (
         <main className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-rose-100 px-4 py-10 flex justify-center relative overflow-hidden">
@@ -138,149 +195,59 @@ export default function SettingsPage() {
                 style={{ animationDelay: "1.5s" }}
             ></div>
 
-            <div className="w-full max-w-4xl space-y-6 relative z-10">
-                <header className={`${CARD_CLASS} p-8 animate-slide-in`}>
+            <div className="w-full max-w-2xl space-y-6 relative z-10">
+                <header className={`${CARD_CLASS} p-8`}>
                     <h1 className="text-4xl font-bold bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent mb-2">
-                        Settings
+                        settings
                     </h1>
-                    <p className="text-rose-600/70 mt-1">
-                        Adjust how Date Photo Book keeps you informed and personalise your
-                        space.
-                    </p>
                 </header>
 
-                <section
-                    className={`${CARD_CLASS} p-8 animate-slide-in`}
-                    style={{ animationDelay: "100ms" }}
-                >
+                <section className={`${CARD_CLASS} p-8 animate-slide-in`}>
                     <h2 className="text-2xl font-bold text-rose-700 mb-2">
-                        Profile Snapshot
+                        profile
                     </h2>
-                    <p className="text-sm text-rose-600/70 mb-6">
-                        These basics come from your signup details. Editing is coming soon.
-                    </p>
-                    <dl className="grid gap-5 sm:grid-cols-2 text-sm">
-                        {[
-                            { label: "Name", value: "You + Your Person" },
-                            { label: "Email", value: "couple@example.com" },
-                            { label: "Partner Link", value: "Pending confirmation" },
-                            { label: "Plan", value: "Free memories" },
-                        ].map((item) => (
-                            <div
-                                key={item.label}
-                                className="p-4 rounded-xl bg-white/50 border border-rose-200/50"
-                            >
-                                <dt className="font-semibold text-rose-600/70 mb-1">
-                                    {item.label}
-                                </dt>
-                                <dd className="text-rose-800 font-medium">{item.value}</dd>
-                            </div>
-                        ))}
-                    </dl>
+                    
+                    <div className="space-y-4">
+                        <div className="p-4 rounded-xl bg-white/50 border border-rose-200/50">
+                            <p className="text-sm font-semibold text-rose-600/70 mb-1">name</p>
+                            <p className="text-rose-800 font-medium">{loading ? "..." : (profile?.user_name || "—")}</p>
+                        </div>
+
+                        <div className="p-4 rounded-xl bg-white/50 border border-rose-200/50">
+                            <p className="text-sm font-semibold text-rose-600/70 mb-1">partner</p>
+                            <p className="text-rose-800 font-medium">{loading ? "..." : (profile?.partner_name || "no partner linked")}</p>
+                        </div>
+
+                        <div className="p-4 rounded-xl bg-white/50 border border-rose-200/50">
+                            <p className="text-sm font-semibold text-rose-600/70 mb-1">email</p>
+                            <p className="text-rose-800 font-medium">{loading ? "..." : (profile?.email || "—")}</p>
+                        </div>
+                    </div>
                 </section>
 
-                <section
-                    className={`${CARD_CLASS} p-8 animate-slide-in`}
-                    style={{ animationDelay: "200ms" }}
-                >
-                    <h2 className="text-2xl font-bold text-rose-700 mb-2">
-                        Notification Preferences
+                <section className={`${CARD_CLASS} p-8 animate-slide-in`}>
+                    <h2 className="text-2xl font-bold text-rose-700 mb-6">
+                        notifications
                     </h2>
-                    <p className="text-sm text-rose-600/70 mb-6">
-                        Pick how we nudge you about upcoming dates, uploads, or partner
-                        activity.
-                    </p>
-                    <ul className="space-y-3">
-                        {(() => {
-                            const NOTIFICATION_OPTIONS: {
-                                key: ToggleKey;
-                                label: string;
-                                detail: string;
-                            }[] = [
-                                {
-                                    key: "email",
-                                    label: "Email reminders",
-                                    detail: "Weekly wrap-ups and important alerts.",
-                                },
-                                {
-                                    key: "sms",
-                                    label: "Text messages",
-                                    detail: "Last-minute date reminders straight to your phone.",
-                                },
-                                {
-                                    key: "push",
-                                    label: "Push notifications",
-                                    detail: "Instant updates in the browser or app.",
-                                },
-                                {
-                                    key: "digest",
-                                    label: "Monthly digest",
-                                    detail: "A highlight reel every month.",
-                                },
-                            ];
-                            return NOTIFICATION_OPTIONS.map(
-                                ({ key, label, detail }) => (
-                                    <li
-                                        key={key}
-                                        className="flex items-center justify-between rounded-xl border-2 border-rose-200/50 bg-white/50 px-5 py-4 hover:bg-white/70 transition-all"
-                                    >
-                                        <div>
-                                            <p className="font-semibold text-rose-800">{label}</p>
-                                            <p className="text-sm text-rose-600/70">{detail}</p>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => toggle(key)}
-                                            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all ${
-                                                toggles[key]
-                                                    ? "bg-gradient-to-r from-rose-500 to-pink-500"
-                                                    : "bg-rose-200"
-                                            }`}
-                                            aria-pressed={toggles[key]}
-                                        >
-                      <span
-                          className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-all ${
-                              toggles[key] ? "translate-x-6" : "translate-x-1"
-                          }`}
-                      />
-                                        </button>
-                                    </li>
-                                )
-                            );
-                        })()}
-                    </ul>
-                </section>
-
-                <section
-                    className={`${CARD_CLASS} p-8 animate-slide-in`}
-                    style={{ animationDelay: "300ms" }}
-                >
-                    <h2 className="text-2xl font-bold text-rose-700 mb-2">
-                        Memory Retention
-                    </h2>
-                    <p className="text-sm text-rose-600/70 mb-6">
-                        Decide how long we keep archived photos and drafts before we prompt
-                        you.
-                    </p>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        {[
-                            { label: "Photo backup", value: "Forever" },
-                            { label: "Draft dates", value: "30 days" },
-                            { label: "Shared albums", value: "Until both remove" },
-                            { label: "Download format", value: "High quality JPG" },
-                        ].map((item) => (
-                            <div
-                                key={item.label}
-                                className="rounded-xl border-2 border-rose-200/50 bg-white/50 p-5 hover:bg-white/70 transition-all"
-                            >
-                                <p className="text-xs uppercase tracking-wide text-rose-600/70 font-semibold mb-2">
-                                    {item.label}
-                                </p>
-                                <p className="text-lg font-bold text-rose-800">
-                                    {item.value}
-                                </p>
-                            </div>
-                        ))}
+                    
+                    <div className="flex items-center justify-between rounded-xl border-2 border-rose-200/50 bg-white/50 px-5 py-4">
+                        <div>
+                            <p className="font-semibold text-rose-800">notifications</p>
+                            <p className="text-sm text-rose-600/70">get instant updates</p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setNotifications(!notifications)}
+                            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all ${
+                                notifications ? "bg-gradient-to-r from-rose-500 to-pink-500" : "bg-rose-200"
+                            }`}
+                        >
+                            <span
+                                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-all ${
+                                    notifications ? "translate-x-6" : "translate-x-1"
+                                }`}
+                            />
+                        </button>
                     </div>
                 </section>
 

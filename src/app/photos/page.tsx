@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { getCachedData, setCachedData } from "@/lib/cache";
 
 type PhotoItem = {
     photo_id: string;
@@ -38,7 +39,26 @@ export default function PhotosPage() {
         let isMounted = true;
 
         async function load() {
+            if (!userId) return;
             try {
+                // Check cache first
+                const cached = getCachedData<PhotoItem[]>("photos", userId);
+                if (cached && isMounted) {
+                    setPhotos(cached);
+                    setLoading(false);
+                    // Still fetch in background to update cache
+                    fetch(`/api/photos?user_id=${encodeURIComponent(userId)}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data && !data.error && Array.isArray(data) && isMounted && userId) {
+                                setCachedData("photos", userId, data);
+                                setPhotos(data);
+                            }
+                        })
+                        .catch(() => {});
+                    return;
+                }
+
                 setLoading(true);
                 setError(null);
 
@@ -49,7 +69,10 @@ export default function PhotosPage() {
                     throw new Error(data.error || "Failed to load photos");
                 }
 
-                if (isMounted) setPhotos(data);
+                if (isMounted && userId) {
+                    setPhotos(data);
+                    setCachedData("photos", userId, data);
+                }
             } catch (err: any) {
                 console.error(err);
                 if (isMounted) setError(err.message || "Failed to load photos");
@@ -112,7 +135,6 @@ export default function PhotosPage() {
                             <div
                                 key={photo.photo_id}
                                 className="glass-strong rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden hover:scale-[1.02] animate-slide-in cursor-pointer group"
-                                style={{ animationDelay: `${index * 50}ms` }}
                                 onClick={() => setSelectedPhoto(photo)}
                             >
                                 <div className="relative w-full aspect-square overflow-hidden">

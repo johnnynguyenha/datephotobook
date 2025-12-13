@@ -13,6 +13,7 @@ export async function GET(req: Request) {
         const query = `
       SELECT 
         u.username AS user_name,
+        u.email,
         p.username AS partner_name,
         pr.theme_setting,
         pr.display_name

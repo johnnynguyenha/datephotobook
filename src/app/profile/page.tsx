@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import DateGrid from "@/components/DateGrid";
+import { getCachedData, setCachedData } from "@/lib/cache";
 
 type ProfileData = {
     user_name: string;
@@ -54,13 +55,38 @@ export default function ProfilePage() {
     }, []);
 
     useEffect(() => {
-        if (!userId) return;
+        if (!userId) {
+            setProfileLoading(false);
+            return;
+        }
         async function fetchProfile() {
             try {
+                // Check cache first
+                const cached = getCachedData<ProfileData>("profile", userId);
+                if (cached) {
+                    setProfile(cached);
+                    setProfileLoading(false);
+                    // Still fetch in background to update cache
+                    fetch(`/api/profile?user_id=${userId}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data && !data.error) {
+                                setCachedData("profile", userId, data);
+                                setProfile(data);
+                            }
+                        })
+                        .catch(() => {});
+                    return;
+                }
+
                 setProfileLoading(true);
+                setProfile(null);
                 const res = await fetch(`/api/profile?user_id=${userId}`);
                 const data = await res.json();
-                if (res.ok) setProfile(data);
+                if (res.ok && data) {
+                    setProfile(data);
+                    setCachedData("profile", userId, data);
+                }
             } catch (err) {
                 console.error("Failed to load profile:", err);
             } finally {
@@ -225,7 +251,7 @@ export default function ProfilePage() {
                 style={{ animationDelay: "1.5s" }}
             ></div>
 
-            <div className="glass-strong shadow-2xl p-8 w-full max-w-2xl text-center mb-8 rounded-3xl relative z-10 animate-slide-in">
+            <div className="glass-strong shadow-2xl p-8 w-full max-w-2xl text-center mb-8 rounded-3xl relative z-10">
                 <div className="flex flex-col items-center space-y-5">
                     <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-rose-300/80 shadow-xl animate-pulse-glow">
                         <img
