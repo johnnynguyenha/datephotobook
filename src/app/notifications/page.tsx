@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const CARD_CLASS =
     "glass-strong shadow-xl rounded-3xl border border-rose-100/50";
@@ -171,6 +172,7 @@ function getNotificationContent(notification: Notification): { title: string; de
 type FilterType = "all" | "unread" | "partner" | "dates" | "photos";
 
 export default function NotificationsPage() {
+    const router = useRouter();
     const [userId, setUserId] = useState<string | null>(null);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
@@ -521,16 +523,41 @@ export default function NotificationsPage() {
                                 // Skip partner requests in main list (shown above)
                                 if (isPartnerRequest) return null;
 
+                                const isCommentNotification = notification.type === "COMMENT" && notification.message.date_id;
+                                const handleNotificationClick = () => {
+                                    if (isCommentNotification && notification.message.date_id) {
+                                        // mark as read if unread
+                                        if (!notification.read) {
+                                            handleMarkRead(notification.id);
+                                        }
+                                        // store the date_id so the dates page can auto-open comments
+                                        if (typeof window !== "undefined" && notification.message.date_id) {
+                                            sessionStorage.setItem("openCommentsForDate", notification.message.date_id as string);
+                                        }
+                                        // navigate to dates page
+                                        router.push("/dates");
+                                    }
+                                };
+
+                                const NotificationWrapper = isCommentNotification ? "button" : "div";
+                                const wrapperProps = isCommentNotification 
+                                    ? { onClick: handleNotificationClick, type: "button" as const }
+                                    : {};
+
                                 return (
                                     <li
                                         key={notification.id}
-                                        className={`p-5 rounded-2xl border-2 flex gap-4 transition-all hover:scale-[1.01] animate-fade-in group ${
-                                            notification.read
-                                                ? "bg-white/70 border-rose-200/50"
-                                                : "bg-white border-rose-300/50 shadow-md"
-                                        }`}
-                                        style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
+                                        className={`${isCommentNotification ? "cursor-pointer" : ""}`}
                                     >
+                                        <NotificationWrapper
+                                            {...wrapperProps}
+                                            className={`w-full p-5 rounded-2xl border-2 flex gap-4 transition-all hover:scale-[1.01] animate-fade-in group ${
+                                                notification.read
+                                                    ? "bg-white/70 border-rose-200/50"
+                                                    : "bg-white border-rose-300/50 shadow-md"
+                                            } ${isCommentNotification ? "hover:border-rose-400" : ""}`}
+                                            style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
+                                        >
                                         <span
                                             className={`mt-1 inline-flex h-12 w-12 items-center justify-center rounded-full text-lg font-semibold ring-2 ${config.colors} flex-shrink-0`}
                                         >
@@ -574,6 +601,7 @@ export default function NotificationsPage() {
                                                 {actionLoading === notification.id ? "..." : "✕"}
                                             </button>
                                         </div>
+                                        </NotificationWrapper>
                                     </li>
                                 );
                             })}

@@ -71,6 +71,28 @@ export default function DatesPage() {
         };
     }, []);
 
+    // auto-open comments if coming from a notification
+    useEffect(() => {
+        if (typeof window !== "undefined" && dates.length > 0 && !loading) {
+            const dateIdToOpen = sessionStorage.getItem("openCommentsForDate");
+            if (dateIdToOpen) {
+                sessionStorage.removeItem("openCommentsForDate");
+                // check if the date exists in our list
+                const dateExists = dates.some(d => d.date_id === dateIdToOpen);
+                if (dateExists) {
+                    setOpenCommentsId(dateIdToOpen);
+                    // scroll to the date card after a brief delay
+                    setTimeout(() => {
+                        const element = document.querySelector(`[data-date-id="${dateIdToOpen}"]`);
+                        if (element) {
+                            element.scrollIntoView({ behavior: "smooth", block: "center" });
+                        }
+                    }, 300);
+                }
+            }
+        }
+    }, [dates, loading]);
+
     useEffect(() => {
         if (!userId) {
             setLoading(false);
@@ -328,6 +350,7 @@ export default function DatesPage() {
                         return (
                             <article
                                 key={d.date_id}
+                                data-date-id={d.date_id}
                                 className="glass-strong rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-5 flex flex-col overflow-hidden hover:scale-[1.02] animate-slide-in"
                             >
                                 <div className="relative w-full h-52 mb-4 overflow-hidden rounded-xl group">
