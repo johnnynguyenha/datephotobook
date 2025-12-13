@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
+import { notifyPartnerRemoved } from "@/lib/notifications";
 
 export async function POST(req: Request) {
     const client = await pool.connect();
@@ -19,7 +20,7 @@ export async function POST(req: Request) {
 
 
         const resUser = await client.query(
-            "SELECT user_id, partner_id FROM users WHERE user_id = $1 FOR UPDATE",
+            "SELECT user_id, username, partner_id FROM users WHERE user_id = $1 FOR UPDATE",
             [user_id]
         );
 
@@ -65,6 +66,9 @@ export async function POST(req: Request) {
 
         await client.query("COMMIT");
         client.release();
+
+        // Notify the partner that the partnership has ended
+        await notifyPartnerRemoved(partnerId, user.username);
 
         return NextResponse.json({ success: true });
     } catch (err) {

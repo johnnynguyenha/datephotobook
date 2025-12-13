@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import clsx from "clsx";
 
 export type NavCounts = {
@@ -38,8 +38,35 @@ const NAV_SECTIONS: { title?: string; items: Item[] }[] = [
     },
 ];
 
-export default function SidebarClient({ counts }: { counts?: NavCounts }) {
+export default function SidebarClient({ counts: initialCounts }: { counts?: NavCounts }) {
     const pathname = usePathname() || "/";
+    const [counts, setCounts] = useState<NavCounts | undefined>(initialCounts);
+
+    // Fetch counts on client side for real-time updates
+    const fetchCounts = useCallback(async () => {
+        try {
+            const userId = typeof window !== "undefined" ? localStorage.getItem("userId") : null;
+            if (!userId) return;
+
+            const res = await fetch(`/api/stats?user_id=${userId}`);
+            if (res.ok) {
+                const data = await res.json();
+                setCounts(data);
+            }
+        } catch {
+            // Ignore errors
+        }
+    }, []);
+
+    useEffect(() => {
+        // Fetch counts on mount and when pathname changes
+        fetchCounts();
+
+        // Set up interval to refresh counts periodically
+        const interval = setInterval(fetchCounts, 30000); // Every 30 seconds
+
+        return () => clearInterval(interval);
+    }, [fetchCounts, pathname]);
 
     const [open, setOpen] = useState(() => {
         if (typeof window === "undefined") return true;

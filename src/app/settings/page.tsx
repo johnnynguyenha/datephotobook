@@ -125,6 +125,121 @@ function PasswordSettingsCard() {
     );
 }
 
+function NotificationsSettingsCard({ userId }: { userId: string | null }) {
+    const [notifications, setNotifications] = useState(true);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+    useEffect(() => {
+        if (!userId) {
+            setLoading(false);
+            return;
+        }
+
+        async function fetchSettings() {
+            try {
+                const res = await fetch(`/api/settings/notifications?user_id=${userId}`);
+                const data = await res.json();
+                if (res.ok) {
+                    setNotifications(data.notifications_enabled ?? true);
+                }
+            } catch (err) {
+                console.error("Failed to fetch notification settings:", err);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        fetchSettings();
+    }, [userId]);
+
+    async function handleToggle() {
+        if (!userId || saving) return;
+
+        const newValue = !notifications;
+        setNotifications(newValue);
+        setSaving(true);
+        setMessage(null);
+
+        try {
+            const res = await fetch("/api/settings/notifications", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    user_id: userId,
+                    notifications_enabled: newValue,
+                }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                // Revert on failure
+                setNotifications(!newValue);
+                setMessage({ type: "error", text: data.error || "Failed to update settings" });
+            } else {
+                setMessage({ 
+                    type: "success", 
+                    text: newValue ? "Notifications enabled" : "Notifications disabled" 
+                });
+                // Clear success message after 2 seconds
+                setTimeout(() => setMessage(null), 2000);
+            }
+        } catch (err) {
+            console.error("Failed to update notification settings:", err);
+            setNotifications(!newValue);
+            setMessage({ type: "error", text: "Failed to update settings" });
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    return (
+        <section className={`${CARD_CLASS} p-8 animate-slide-in`}>
+            <h2 className="text-2xl font-bold text-rose-700 mb-6">
+                notifications
+            </h2>
+
+            {message && (
+                <div className={`mb-4 rounded-xl px-4 py-2 text-sm ${
+                    message.type === "success" 
+                        ? "bg-emerald-50 border border-emerald-200 text-emerald-700" 
+                        : "bg-red-50 border border-red-200 text-red-600"
+                }`}>
+                    {message.text}
+                </div>
+            )}
+            
+            <div className="flex items-center justify-between rounded-xl border-2 border-rose-200/50 bg-white/50 px-5 py-4">
+                <div>
+                    <p className="font-semibold text-rose-800">notifications</p>
+                    <p className="text-sm text-rose-600/70">get instant updates</p>
+                </div>
+                <button
+                    type="button"
+                    onClick={handleToggle}
+                    disabled={loading || saving}
+                    className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all ${
+                        notifications ? "bg-gradient-to-r from-rose-500 to-pink-500" : "bg-rose-200"
+                    } ${(loading || saving) ? "opacity-50 cursor-not-allowed" : ""}`}
+                >
+                    <span
+                        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-all ${
+                            notifications ? "translate-x-6" : "translate-x-1"
+                        }`}
+                    />
+                    {saving && (
+                        <span className="absolute inset-0 flex items-center justify-center">
+                            <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                        </span>
+                    )}
+                </button>
+            </div>
+        </section>
+    );
+}
+
 export default function SettingsPage() {
     const [userId, setUserId] = useState<string | null>(() => {
         if (typeof window !== "undefined") {
@@ -134,7 +249,6 @@ export default function SettingsPage() {
     });
     const [profile, setProfile] = useState<ProfileData | null>(null);
     const [loading, setLoading] = useState(true);
-    const [notifications, setNotifications] = useState(true);
 
     useEffect(() => {
         if (typeof window !== "undefined") {
@@ -225,31 +339,7 @@ export default function SettingsPage() {
                     </div>
                 </section>
 
-                <section className={`${CARD_CLASS} p-8 animate-slide-in`}>
-                    <h2 className="text-2xl font-bold text-rose-700 mb-6">
-                        notifications
-                    </h2>
-                    
-                    <div className="flex items-center justify-between rounded-xl border-2 border-rose-200/50 bg-white/50 px-5 py-4">
-                        <div>
-                            <p className="font-semibold text-rose-800">notifications</p>
-                            <p className="text-sm text-rose-600/70">get instant updates</p>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => setNotifications(!notifications)}
-                            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all ${
-                                notifications ? "bg-gradient-to-r from-rose-500 to-pink-500" : "bg-rose-200"
-                            }`}
-                        >
-                            <span
-                                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-all ${
-                                    notifications ? "translate-x-6" : "translate-x-1"
-                                }`}
-                            />
-                        </button>
-                    </div>
-                </section>
+                <NotificationsSettingsCard userId={userId} />
 
                 <PasswordSettingsCard />
             </div>

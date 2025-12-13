@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
+import { notifyPartnerAccepted } from "@/lib/notifications";
 
 export async function POST(req: Request) {
     const client = await pool.connect();
@@ -60,6 +61,7 @@ export async function POST(req: Request) {
         const payload = JSON.parse(notif.message);
         const fromUserId = payload.from_user_id as string;
         const toUserId = payload.to_user_id as string;
+        const toUsername = payload.to_username as string;
 
         const usersRes = await client.query(
             `
@@ -112,6 +114,9 @@ export async function POST(req: Request) {
 
         await client.query("COMMIT");
         client.release();
+
+        // Send notification to the original requester that their request was accepted
+        await notifyPartnerAccepted(fromUserId, toUserId, toUsername);
 
         return NextResponse.json({ success: true });
     } catch (err) {

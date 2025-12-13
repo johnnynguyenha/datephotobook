@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
+import { notifyComment } from "@/lib/notifications";
 
 type CommentRow = {
     comment_id: string;
@@ -14,6 +15,7 @@ async function getDateVisibility(dateId: string) {
         `
     SELECT
       d.date_id,
+      d.title AS date_title,
       d.privacy AS date_privacy,
       p.visibility AS profile_visibility,
       p.user_id AS owner_user_id,
@@ -28,6 +30,7 @@ async function getDateVisibility(dateId: string) {
 
     return rows[0] as {
         date_id: string;
+        date_title: string | null;
         date_privacy: "INHERIT" | "PUBLIC" | "PRIVATE";
         profile_visibility: "PUBLIC" | "PRIVATE";
         owner_user_id: string;
@@ -151,6 +154,32 @@ export async function POST(req: NextRequest) {
             [userId]
         );
         const username = userRes.rows[0]?.username ?? "Unknown";
+
+        // Send notification to date owner (if not the commenter)
+        if (userId !== owner_user_id) {
+            const dateTitle = dateInfo.date_title || "your date";
+            notifyComment(
+                owner_user_id,
+                userId,
+                username,
+                dateId,
+                dateTitle,
+                content.trim().slice(0, 100)
+            ).catch((err) => console.error("Failed to send comment notification:", err));
+        }
+
+        // Also notify partner if they exist and are not the commenter
+        if (owner_partner_id && userId !== owner_partner_id) {
+            const dateTitle = dateInfo.date_title || "a date";
+            notifyComment(
+                owner_partner_id,
+                userId,
+                username,
+                dateId,
+                dateTitle,
+                content.trim().slice(0, 100)
+            ).catch((err) => console.error("Failed to send comment notification to partner:", err));
+        }
 
         return NextResponse.json(
             {
