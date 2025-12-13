@@ -65,12 +65,89 @@ export async function GET(req: Request) {
     try {
         const { searchParams } = new URL(req.url);
         const userId = searchParams.get("user_id");
+        const username = searchParams.get("username");
+        const publicOnly = searchParams.get("public_only") === "true";
 
         let rows;
 
-        if (userId && isValidUUID(userId)) {
-            const result = await pool.query(
-                `
+        if (username) {
+            // get dates for a public profile by username
+            // show dates from both the user and their partner (if they have one)
+            // first find the user and their partner
+            const userResult = await pool.query(
+                `SELECT user_id, partner_id FROM users WHERE username = $1 LIMIT 1`,
+                [username]
+            );
+
+            if (userResult.rows.length === 0) {
+                rows = [];
+            } else {
+                const targetUserId = userResult.rows[0].user_id;
+                const partnerId = userResult.rows[0].partner_id;
+
+                // build query to get dates from both user and partner
+                let query: string;
+                let params: string[];
+
+                if (partnerId) {
+                    query = `
+                        SELECT
+                            d.*,
+                            p.user_id,
+                            p.visibility,
+                            u.partner_id AS owner_partner_id,
+                            ph.file_path AS image_path
+                        FROM dates d
+                                 JOIN profiles p ON d.profile_id = p.profile_id
+                                 JOIN users u ON p.user_id = u.user_id
+                                 LEFT JOIN LATERAL (
+                            SELECT file_path
+                            FROM photos
+                            WHERE date_id = d.date_id
+                            ORDER BY uploaded_at ASC
+                                LIMIT 1
+                        ) ph ON true
+                        WHERE
+                            (p.user_id = $1 OR p.user_id = $2)
+                            AND (d.privacy = 'PUBLIC' OR (d.privacy = 'INHERIT' AND p.visibility = 'PUBLIC'))
+                        ORDER BY d.date_time DESC
+                    `;
+                    params = [targetUserId, partnerId];
+                } else {
+                    query = `
+                        SELECT
+                            d.*,
+                            p.user_id,
+                            p.visibility,
+                            u.partner_id AS owner_partner_id,
+                            ph.file_path AS image_path
+                        FROM dates d
+                                 JOIN profiles p ON d.profile_id = p.profile_id
+                                 JOIN users u ON p.user_id = u.user_id
+                                 LEFT JOIN LATERAL (
+                            SELECT file_path
+                            FROM photos
+                            WHERE date_id = d.date_id
+                            ORDER BY uploaded_at ASC
+                                LIMIT 1
+                        ) ph ON true
+                        WHERE
+                            p.user_id = $1
+                            AND (d.privacy = 'PUBLIC' OR (d.privacy = 'INHERIT' AND p.visibility = 'PUBLIC'))
+                        ORDER BY d.date_time DESC
+                    `;
+                    params = [targetUserId];
+                }
+
+                const result = await pool.query(query, params);
+                rows = result.rows;
+            }
+        } else if (userId && isValidUUID(userId)) {
+            let query: string;
+            let params: string[];
+            
+            if (publicOnly) {
+                query = `
                     SELECT
                         d.*,
                         p.user_id,
@@ -86,15 +163,38 @@ export async function GET(req: Request) {
                         WHERE date_id = d.date_id
                         ORDER BY uploaded_at ASC
                             LIMIT 1
-          ) ph ON true
+                    ) ph ON true
                     WHERE
-                        p.user_id = $1
-                       OR d.privacy = 'PUBLIC'
-                       OR (d.privacy = 'INHERIT' AND p.visibility = 'PUBLIC')
+                        (d.privacy = 'PUBLIC' OR (d.privacy = 'INHERIT' AND p.visibility = 'PUBLIC'))
                     ORDER BY d.date_time DESC
-                `,
-                [userId]
-            );
+                `;
+                params = [];
+            } else {
+                query = `
+                    SELECT
+                        d.*,
+                        p.user_id,
+                        p.visibility,
+                        u.partner_id AS owner_partner_id,
+                        ph.file_path AS image_path
+                    FROM dates d
+                             JOIN profiles p ON d.profile_id = p.profile_id
+                             JOIN users u ON p.user_id = u.user_id
+                             LEFT JOIN LATERAL (
+                        SELECT file_path
+                        FROM photos
+                        WHERE date_id = d.date_id
+                        ORDER BY uploaded_at ASC
+                            LIMIT 1
+                    ) ph ON true
+                    WHERE
+                        (p.user_id = $1 OR d.privacy = 'PUBLIC' OR (d.privacy = 'INHERIT' AND p.visibility = 'PUBLIC'))
+                    ORDER BY d.date_time DESC
+                `;
+                params = [userId];
+            }
+            
+            const result = await pool.query(query, params);
             rows = result.rows;
         } else {
             const result = await pool.query(
@@ -144,6 +244,7 @@ export async function POST(req: Request) {
         let date_time: string | null = null;
         let location: string | null = null;
         let privacy: string | null = null;
+        let price: string | null = null;
         let user_id: string | null = null;
 
         let imageFile: File | null = null;
@@ -156,6 +257,7 @@ export async function POST(req: Request) {
             date_time = (formData.get("date_time") as string) ?? null;
             location = (formData.get("location") as string) ?? null;
             privacy = (formData.get("privacy") as string) ?? null;
+            price = (formData.get("price") as string) ?? null;
             user_id = (formData.get("user_id") as string) ?? null;
 
             const maybeFile = formData.get("image");
@@ -171,6 +273,7 @@ export async function POST(req: Request) {
             date_time = data.date_time ?? null;
             location = data.location ?? null;
             privacy = data.privacy ?? null;
+            price = data.price ?? null;
             user_id = data.user_id ?? null;
         }
 
@@ -223,13 +326,15 @@ export async function POST(req: Request) {
 
         const profile_id = await getOrCreateProfileIdForUser(user_id);
 
+        const priceValue = price && price.trim() !== "" ? parseFloat(price) : null;
+
         const dateResult = await pool.query(
             `
-                INSERT INTO dates (profile_id, title, description, date_time, location, privacy)
-                VALUES ($1, $2, $3, $4, $5, $6)
+                INSERT INTO dates (profile_id, title, description, date_time, location, privacy, price)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
                     RETURNING *
             `,
-            [profile_id, title, description, date_time, location, privacy]
+            [profile_id, title, description, date_time, location, privacy, priceValue]
         );
 
         const dateRow = dateResult.rows[0];
@@ -296,6 +401,7 @@ export async function PUT(req: Request) {
         const date_time: string | null | undefined = data.date_time;
         const location: string | null | undefined = data.location;
         const privacy: string | null | undefined = data.privacy;
+        const price: string | number | null | undefined = data.price;
 
         if (!dateId) {
             return NextResponse.json(
@@ -354,6 +460,11 @@ export async function PUT(req: Request) {
         if (privacy !== undefined) {
             fields.push(`privacy = $${idx++}`);
             values.push(privacy);
+        }
+        if (price !== undefined) {
+            const priceValue = price === null || price === "" ? null : (typeof price === "string" ? parseFloat(price) : price);
+            fields.push(`price = $${idx++}`);
+            values.push(priceValue);
         }
 
         if (fields.length === 0) {

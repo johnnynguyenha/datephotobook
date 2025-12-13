@@ -46,13 +46,18 @@ export default function ProfilePage() {
     const [avatarError, setAvatarError] = useState<string | null>(null);
     const [avatarVersion, setAvatarVersion] = useState(0);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const [showShareModal, setShowShareModal] = useState(false);
+    const [profileLink, setProfileLink] = useState("");
 
     useEffect(() => {
         if (typeof window !== "undefined") {
             const id = localStorage.getItem("userId");
             setUserId(id);
+            if (id && profile?.user_name) {
+                setProfileLink(`${window.location.origin}/profile/${profile.user_name}`);
+            }
         }
-    }, []);
+    }, [profile?.user_name]);
 
     useEffect(() => {
         if (!userId) {
@@ -329,7 +334,7 @@ export default function ProfilePage() {
                             : `"Making memories one date at a time 💕"`}
                     </p>
 
-                    <div className="mt-6">
+                    <div className="mt-6 flex items-center gap-4 justify-center">
                         <Link
                             href="/create-date"
                             className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white px-6 py-3 font-semibold shadow-lg shadow-rose-200/50 hover:shadow-xl hover:shadow-rose-300/50 hover:scale-105 active:scale-95 transition-all duration-200"
@@ -337,6 +342,15 @@ export default function ProfilePage() {
                             <span className="text-xl">+</span>
                             <span>Add Date</span>
                         </Link>
+                        {profile?.user_name && (
+                            <button
+                                onClick={() => setShowShareModal(true)}
+                                className="inline-flex items-center gap-2 rounded-xl bg-rose-100 text-rose-700 px-6 py-3 font-semibold border-2 border-rose-200 hover:bg-rose-200 hover:scale-105 active:scale-95 transition-all duration-200"
+                            >
+                                <span>🔗</span>
+                                <span>Share Profile</span>
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
@@ -344,6 +358,44 @@ export default function ProfilePage() {
             <div className="relative z-10 w-full max-w-5xl">
                 <DateGrid />
             </div>
+
+            {showShareModal && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="glass-strong rounded-3xl p-6 max-w-md w-full space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-xl font-bold text-rose-900">Share Profile</h2>
+                            <button
+                                onClick={() => setShowShareModal(false)}
+                                className="text-2xl leading-none text-rose-400 hover:text-rose-600"
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <p className="text-sm text-rose-600/70">
+                            Share this link to let others view your public dates:
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="text"
+                                readOnly
+                                value={profileLink}
+                                className="flex-1 px-4 py-2 rounded-xl border border-rose-200 bg-white/80 text-sm text-rose-900 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                                onClick={(e) => (e.target as HTMLInputElement).select()}
+                            />
+                            <button
+                                onClick={() => {
+                                    navigator.clipboard.writeText(profileLink);
+                                    alert("Profile link copied to clipboard!");
+                                    setShowShareModal(false);
+                                }}
+                                className="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-semibold hover:from-rose-600 hover:to-pink-600 transition-all"
+                            >
+                                Copy
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {requestsModalOpen && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">

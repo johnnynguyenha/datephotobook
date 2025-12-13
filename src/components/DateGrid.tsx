@@ -13,6 +13,7 @@ type DateItem = {
     date_time: string;
     location: string | null;
     privacy: Privacy;
+    price?: number | null;
     image_path?: string | null;
     user_id?: string;
     owner_partner_id?: string | null;
@@ -26,7 +27,12 @@ type ProfileData = {
     theme_setting?: string | null;
 };
 
-export default function DateGrid() {
+type DateGridProps = {
+    username?: string | null;
+    publicView?: boolean;
+};
+
+export default function DateGrid({ username, publicView = false }: DateGridProps = {}) {
     const [dates, setDates] = useState<DateItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -45,6 +51,7 @@ export default function DateGrid() {
     const [editLocation, setEditLocation] = useState("");
     const [editPrivacy, setEditPrivacy] = useState<Privacy>("PUBLIC");
     const [editDateTime, setEditDateTime] = useState("");
+    const [editPrice, setEditPrice] = useState("");
 
     // delete state
     const [deletingDate, setDeletingDate] = useState<DateItem | null>(null);
@@ -79,6 +86,25 @@ export default function DateGrid() {
 
         async function load() {
             try {
+                if (publicView && username) {
+                    // public profile view - only show public dates
+                    setLoading(true);
+                    setError(null);
+
+                    const res = await fetch(`/api/dates?username=${encodeURIComponent(username)}`);
+                    const data = await res.json();
+
+                    if (!res.ok) {
+                        throw new Error(data.error || "Failed to load dates");
+                    }
+
+                    if (isMounted) {
+                        setDates(Array.isArray(data) ? data : []);
+                    }
+                    setLoading(false);
+                    return;
+                }
+
                 const userId = viewerId;
                 
                 if (!userId) {
@@ -86,13 +112,13 @@ export default function DateGrid() {
                     return;
                 }
 
-                // Only clear dates if userId actually changed
+                // only clear dates if the user actually changed
                 if (previousUserIdRef.current && previousUserIdRef.current !== userId) {
-                    // userId changed, don't clear dates here - let React's key-based reconciliation handle it
+                    // user changed, let react handle removing old dates
                 }
                 previousUserIdRef.current = userId;
 
-                // Fetch profile first to get partner_id
+                // get profile to find their partner
                 const cachedProfile = getCachedData<ProfileData>("profile", userId);
                 let profileData: ProfileData | null = cachedProfile;
                 
@@ -110,10 +136,10 @@ export default function DateGrid() {
                     setPartnerId(profileData.partner_id);
                 }
 
-                // Check cache first for dates
+                // check cache first
                 const cached = getCachedData<DateItem[]>("dates", userId);
                 if (cached && isMounted) {
-                    // Filter to only show dates that belong to the user or their partner
+                    // only show dates from this user or their partner
                     const pid = profileData?.partner_id;
                     const myDates = cached.filter((d) => 
                         d.user_id && 
@@ -121,7 +147,7 @@ export default function DateGrid() {
                     );
                     setDates(myDates);
                     setLoading(false);
-                    // Still fetch in background to update cache
+                    // fetch fresh data in the background
                     fetch(`/api/dates?user_id=${encodeURIComponent(userId)}`)
                         .then(res => res.json())
                         .then(data => {
@@ -150,7 +176,7 @@ export default function DateGrid() {
                 }
 
                 if (isMounted) {
-                    // Filter to only show dates that belong to the user or their partner
+                    // only show dates from this user or their partner
                     const pid = profileData?.partner_id;
                     const myDates = data.filter((d: DateItem) => 
                         d.user_id && 
@@ -174,7 +200,7 @@ export default function DateGrid() {
         return () => {
             isMounted = false;
         };
-    }, [viewerId]);
+    }, [viewerId, username, publicView]);
 
     function openEditModal(date: DateItem) {
         if (!viewerId) return;
@@ -184,6 +210,7 @@ export default function DateGrid() {
         setEditTitle(date.title ?? "");
         setEditDescription(date.description ?? "");
         setEditLocation(date.location ?? "");
+        setEditPrice(date.price?.toString() ?? "");
 
         const effectivePrivacy: Privacy =
             date.privacy === "INHERIT" ? "PUBLIC" : date.privacy;
@@ -219,6 +246,7 @@ export default function DateGrid() {
                     location: editLocation.trim() || null,
                     privacy: editPrivacy,
                     date_time: editDateTime || editingDate.date_time,
+                    price: editPrice.trim() || null,
                 }),
             });
 
@@ -238,6 +266,7 @@ export default function DateGrid() {
                             location: data.location,
                             privacy: data.privacy,
                             date_time: data.date_time,
+                            price: data.price,
                         }
                         : d
                 )
@@ -316,6 +345,7 @@ export default function DateGrid() {
                     const commentsOpen = openCommentsId === d.date_id;
 
                     const canEdit =
+                        !publicView &&
                         !!viewerId &&
                         (d.user_id === viewerId || d.owner_partner_id === viewerId);
 
@@ -352,6 +382,12 @@ export default function DateGrid() {
                                 <p className="text-sm text-rose-600/80 mb-2 flex items-center gap-1">
                                     <span>📍</span>
                                     <span>{d.location}</span>
+                                </p>
+                            )}
+
+                            {d.price !== null && d.price !== undefined && (
+                                <p className="text-sm font-semibold text-rose-600 mb-2">
+                                    ${Number(d.price).toFixed(2)}
                                 </p>
                             )}
 
@@ -481,6 +517,21 @@ export default function DateGrid() {
                                     type="text"
                                     value={editLocation}
                                     onChange={(e) => setEditLocation(e.target.value)}
+                                    className="w-full rounded-xl border border-rose-200 bg-white/80 px-3 py-2 text-sm text-black outline-none ring-rose-200 focus:ring"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-rose-800 mb-1">
+                                    Price
+                                </label>
+                                <input
+                                    type="number"
+                                    value={editPrice}
+                                    onChange={(e) => setEditPrice(e.target.value)}
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="0.00"
                                     className="w-full rounded-xl border border-rose-200 bg-white/80 px-3 py-2 text-sm text-black outline-none ring-rose-200 focus:ring"
                                 />
                             </div>

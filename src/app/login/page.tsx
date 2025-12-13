@@ -107,7 +107,13 @@ export default function LoginPage() {
                     </button>
                 </form>
 
-                <div className="text-right mt-2">
+                <div className="flex items-center justify-between mt-2">
+                    <a
+                        href="/signup"
+                        className="text-sm font-semibold text-rose-600 hover:text-rose-700 hover:underline transition"
+                    >
+                        Create an account
+                    </a>
                     <a
                         href="/forgot-password"
                         className="text-sm font-semibold text-rose-600 hover:text-rose-700 hover:underline transition"

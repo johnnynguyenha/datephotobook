@@ -15,6 +15,7 @@ export default function CreateDatePage() {
         date_time: "",
         location: "",
         privacy: "PUBLIC" as Privacy,
+        price: "",
     });
 
     const [imageFile, setImageFile] = useState<File | null>(null);
@@ -69,6 +70,7 @@ export default function CreateDatePage() {
             fd.append("date_time", form.date_time);
             fd.append("location", form.location);
             fd.append("privacy", form.privacy);
+            fd.append("price", form.price);
             fd.append("user_id", userId);
             fd.append("image", imageFile);
 
@@ -185,6 +187,22 @@ export default function CreateDatePage() {
                             />
                         </label>
                     </div>
+
+                    <label className="grid gap-2">
+                        <span className="text-sm font-semibold text-rose-700">
+                            Price
+                        </span>
+                        <input
+                            type="number"
+                            name="price"
+                            value={form.price}
+                            onChange={handleChange}
+                            placeholder="0.00"
+                            step="0.01"
+                            min="0"
+                            className={inputBase}
+                        />
+                    </label>
 
                     <label className="grid gap-2">
                         <span className="text-sm font-semibold text-rose-700">Privacy</span>

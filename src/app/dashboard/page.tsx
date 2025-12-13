@@ -11,6 +11,7 @@ type DateItem = {
     date_time: string;
     location: string | null;
     privacy: "PUBLIC" | "PRIVATE" | "INHERIT";
+    price?: number | null;
     image_path?: string | null;
     user_id?: string;
 };

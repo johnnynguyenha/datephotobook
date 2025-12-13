@@ -21,6 +21,7 @@ type DateItem = {
     date_time: string;
     location: string | null;
     privacy: Privacy;
+    price?: number | null;
     image_path?: string | null;
     user_id?: string;
 };
@@ -41,6 +42,7 @@ export default function DatesPage() {
     const [editLocation, setEditLocation] = useState("");
     const [editPrivacy, setEditPrivacy] = useState<Privacy>("PUBLIC");
     const [editDateTime, setEditDateTime] = useState("");
+    const [editPrice, setEditPrice] = useState("");
 
     const [deletingDate, setDeletingDate] = useState<DateItem | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
@@ -80,7 +82,7 @@ export default function DatesPage() {
         async function load() {
             if (!userId) return;
             try {
-                // Fetch profile first to get partner_id - always fetch fresh to ensure we have latest partner_id
+                // get profile to find their partner, always fetch fresh
                 let profileData: ProfileData | null = null;
                 const profileRes = await fetch(`/api/profile?user_id=${userId}`);
                 if (profileRes.ok) {
@@ -90,30 +92,30 @@ export default function DatesPage() {
                     }
                 }
 
-                // Fallback to cache if fetch failed
+                // use cache if fetch failed
                 if (!profileData) {
                     profileData = getCachedData<ProfileData>("profile", userId);
                 }
 
                 const partnerId = profileData?.partner_id;
 
-                // Check cache first
+                // check cache first
                 const cached = getCachedData<DateItem[]>("dates", userId);
                 if (cached && isMounted) {
-                    // Filter to only show dates that belong to the user or their partner
+                    // only show dates from this user or their partner
                     const mine = cached.filter((d) => 
                         d.user_id && 
                         (d.user_id === userId || (partnerId && d.user_id === partnerId))
                     );
                     setDates(mine);
                     setLoading(false);
-                    // Still fetch in background to update cache
+                    // fetch fresh data in the background
                     fetch(`/api/dates?user_id=${encodeURIComponent(userId)}`)
                         .then(res => res.json())
                         .then(data => {
                             if (data && !data.error && Array.isArray(data) && userId) {
                                 setCachedData("dates", userId, data);
-                                // Filter to only show dates that belong to the user or their partner
+                                // only show dates from this user or their partner
                                 const mine = data.filter((d: DateItem) => 
                                     d.user_id && 
                                     (d.user_id === userId || (partnerId && d.user_id === partnerId))
@@ -137,7 +139,7 @@ export default function DatesPage() {
                     throw new Error(data.error || "Failed to load dates");
                 }
 
-                // Filter to only show dates that belong to the user or their partner
+                // only show dates from this user or their partner
                 const mine = (data as DateItem[]).filter(
                     (d) => d.user_id && 
                         (d.user_id === userId || (partnerId && d.user_id === partnerId))
@@ -169,6 +171,7 @@ export default function DatesPage() {
         setEditTitle(date.title ?? "");
         setEditDescription(date.description ?? "");
         setEditLocation(date.location ?? "");
+        setEditPrice(date.price?.toString() ?? "");
 
         const effectivePrivacy: Privacy =
             date.privacy === "INHERIT" ? "PUBLIC" : date.privacy;
@@ -204,6 +207,7 @@ export default function DatesPage() {
                     location: editLocation.trim() || null,
                     privacy: editPrivacy,
                     date_time: editDateTime || editingDate.date_time,
+                    price: editPrice.trim() || null,
                 }),
             });
 
@@ -223,6 +227,7 @@ export default function DatesPage() {
                             location: data.location,
                             privacy: data.privacy,
                             date_time: data.date_time,
+                            price: data.price,
                         }
                         : d
                 )
@@ -355,6 +360,12 @@ export default function DatesPage() {
                                     </p>
                                 )}
 
+                                {d.price !== null && d.price !== undefined && (
+                                    <p className="text-sm font-semibold text-rose-600 mb-2">
+                                        ${Number(d.price).toFixed(2)}
+                                    </p>
+                                )}
+
                                 {d.description && (
                                     <p className="text-sm text-rose-600/70 line-clamp-3 mb-3 leading-relaxed">
                                         {d.description}
@@ -478,6 +489,21 @@ export default function DatesPage() {
                                     type="text"
                                     value={editLocation}
                                     onChange={(e) => setEditLocation(e.target.value)}
+                                    className="w-full rounded-xl border border-rose-200 bg-white/80 px-3 py-2 text-sm text-black outline-none ring-rose-200 focus:ring"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-rose-800 mb-1">
+                                    Price
+                                </label>
+                                <input
+                                    type="number"
+                                    value={editPrice}
+                                    onChange={(e) => setEditPrice(e.target.value)}
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="0.00"
                                     className="w-full rounded-xl border border-rose-200 bg-white/80 px-3 py-2 text-sm text-black outline-none ring-rose-200 focus:ring"
                                 />
                             </div>

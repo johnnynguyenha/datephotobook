@@ -23,14 +23,67 @@ export default function SignupPage() {
     const [submitting, setSubmitting] = useState(false);
     const [info, setInfo] = useState("");
 
-    const handleNext = () => {
+    const handleNext = async () => {
         setError("");
         setInfo("");
+
+        // check username
+        const trimmedUsername = username.trim();
+        if (!trimmedUsername) {
+            setError("Username is required");
+            return;
+        }
+
+        // check email
+        const trimmedEmail = email.trim().toLowerCase();
+        if (!trimmedEmail) {
+            setError("Email is required");
+            return;
+        }
+        if (!trimmedEmail.includes("@") || !trimmedEmail.includes(".")) {
+            setError("Please enter a valid email address");
+            return;
+        }
+
+        // check password
+        if (!password) {
+            setError("Password is required");
+            return;
+        }
+        if (password.length < 6) {
+            setError("Password must be at least 6 characters long");
+            return;
+        }
+
+        // make sure passwords match
         if (password !== confirmPassword) {
             setError("Passwords do not match");
             return;
         }
-        setStep(2);
+
+        // see if username or email is already taken
+        try {
+            const checkRes = await fetch("/api/auth/check-availability", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    username: trimmedUsername,
+                    email: trimmedEmail,
+                }),
+            });
+
+            const checkData = await checkRes.json();
+
+            if (!checkData.available) {
+                setError(checkData.errors?.join(", ") || "Username or email already taken");
+                return;
+            }
+
+            setStep(2);
+        } catch (err) {
+            console.error("Error checking availability:", err);
+            setError("Failed to verify availability. Please try again.");
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -61,8 +114,8 @@ export default function SignupPage() {
             }
 
             if (data?.token) localStorage.setItem("token", data.token);
-            if (data?.id) localStorage.setItem("userId", String(data.id));
-            if (!data?.token && !data?.id) {
+            if (data?.user_id) localStorage.setItem("userId", String(data.user_id));
+            if (!data?.token && !data?.user_id) {
                 localStorage.setItem("user", JSON.stringify(data));
             }
 
@@ -100,9 +153,9 @@ export default function SignupPage() {
 
                 {step === 1 && (
                     <form
-                        onSubmit={(e) => {
+                        onSubmit={async (e) => {
                             e.preventDefault();
-                            handleNext();
+                            await handleNext();
                         }}
                         className="flex flex-col space-y-5"
                     >
