@@ -33,6 +33,9 @@ export default function DatesPage() {
     const [editPrivacy, setEditPrivacy] = useState<Privacy>("PUBLIC");
     const [editDateTime, setEditDateTime] = useState("");
 
+    const [deletingDate, setDeletingDate] = useState<DateItem | null>(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
+
     useEffect(() => {
         if (typeof window !== "undefined") {
             const id = localStorage.getItem("userId");
@@ -157,6 +160,44 @@ export default function DatesPage() {
         }
     }
 
+    function openDeleteModal(date: DateItem) {
+        setDeletingDate(date);
+    }
+
+    function closeDeleteModal() {
+        setDeletingDate(null);
+    }
+
+    async function handleConfirmDelete() {
+        if (!deletingDate || !userId) return;
+
+        try {
+            setDeleteLoading(true);
+
+            const res = await fetch(
+                `/api/dates?date_id=${encodeURIComponent(deletingDate.date_id)}&user_id=${encodeURIComponent(userId)}`,
+                { method: "DELETE" }
+            );
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || "Failed to delete date");
+            }
+
+            setDates((prev) =>
+                prev.filter((d) => d.date_id !== deletingDate.date_id)
+            );
+
+            closeDeleteModal();
+        } catch (err: any) {
+            console.error(err);
+            alert(err.message || "Failed to delete date");
+        } finally {
+            setDeleteLoading(false);
+        }
+    }
+
     return (
         <main className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-rose-100 flex flex-col items-center py-10 px-4 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-64 h-64 bg-rose-200/20 rounded-full blur-3xl animate-float"></div>
@@ -262,6 +303,14 @@ export default function DatesPage() {
                                             className="text-xs font-medium text-rose-600 bg-rose-50/70 border border-rose-200/70 px-3 py-1.5 rounded-full hover:bg-rose-100 transition"
                                         >
                                             Edit
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => openDeleteModal(d)}
+                                            className="text-xs font-medium text-red-600 bg-red-50/70 border border-red-200/70 px-3 py-1.5 rounded-full hover:bg-red-100 transition"
+                                        >
+                                            Delete
                                         </button>
 
                                         <button
@@ -391,6 +440,58 @@ export default function DatesPage() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {deletingDate && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+                    <div className="glass-strong rounded-3xl shadow-2xl max-w-sm w-full p-6 space-y-4 animate-slide-in">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-xl font-bold text-rose-900">
+                                Delete Date
+                            </h2>
+                            <button
+                                onClick={closeDeleteModal}
+                                className="text-2xl leading-none text-rose-400 hover:text-rose-600"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <div className="text-center py-4">
+                            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+                                <span className="text-3xl">⚠️</span>
+                            </div>
+                            <p className="text-rose-800 font-medium mb-2">
+                                Are you sure you want to delete this date?
+                            </p>
+                            <p className="text-rose-600/70 text-sm">
+                                &quot;{deletingDate.title || "Untitled date"}&quot;
+                            </p>
+                            <p className="text-red-500/80 text-xs mt-3">
+                                This action cannot be undone. All photos and comments associated with this date will also be deleted.
+                            </p>
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-2">
+                            <button
+                                type="button"
+                                onClick={closeDeleteModal}
+                                className="px-4 py-2 rounded-xl border border-rose-200 text-sm text-rose-700 hover:bg-rose-50"
+                                disabled={deleteLoading}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleConfirmDelete}
+                                disabled={deleteLoading}
+                                className="px-4 py-2 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-sm font-semibold text-white shadow-md hover:from-red-600 hover:to-red-700 disabled:opacity-60"
+                            >
+                                {deleteLoading ? "Deleting…" : "Delete"}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

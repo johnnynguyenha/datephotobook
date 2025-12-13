@@ -393,3 +393,96 @@ export async function PUT(req: Request) {
         );
     }
 }
+
+export async function DELETE(req: Request) {
+    try {
+        const { searchParams } = new URL(req.url);
+        const dateId = searchParams.get("date_id");
+        const userId = searchParams.get("user_id");
+
+        if (!dateId) {
+            return NextResponse.json(
+                { error: "date_id is required" },
+                { status: 400 }
+            );
+        }
+        if (!userId) {
+            return NextResponse.json(
+                { error: "user_id is required" },
+                { status: 400 }
+            );
+        }
+
+        if (!isValidUUID(dateId)) {
+            return NextResponse.json(
+                { error: `date_id is not a valid UUID: ${dateId}` },
+                { status: 400 }
+            );
+        }
+        if (!isValidUUID(userId)) {
+            return NextResponse.json(
+                { error: `user_id is not a valid UUID: ${userId}` },
+                { status: 400 }
+            );
+        }
+
+        const allowed = await canEditDate(dateId, userId);
+        if (!allowed) {
+            return NextResponse.json(
+                { error: "You are not allowed to delete this date" },
+                { status: 403 }
+            );
+        }
+
+        // First, get all photos associated with this date to delete their files
+        const photosResult = await pool.query(
+            `SELECT file_path FROM photos WHERE date_id = $1`,
+            [dateId]
+        );
+
+        // Delete photo files from filesystem
+        for (const photo of photosResult.rows) {
+            if (photo.file_path) {
+                try {
+                    const filePath = path.join(process.cwd(), "public", photo.file_path);
+                    await fs.unlink(filePath);
+                } catch (fileErr) {
+                    console.warn(`Could not delete file ${photo.file_path}:`, fileErr);
+                }
+            }
+        }
+
+        // Delete comments associated with the date
+        await pool.query(
+            `DELETE FROM comments WHERE date_id = $1`,
+            [dateId]
+        );
+
+        // Delete photos associated with the date
+        await pool.query(
+            `DELETE FROM photos WHERE date_id = $1`,
+            [dateId]
+        );
+
+        // Delete the date itself
+        const result = await pool.query(
+            `DELETE FROM dates WHERE date_id = $1 RETURNING *`,
+            [dateId]
+        );
+
+        if (result.rows.length === 0) {
+            return NextResponse.json(
+                { error: "Date not found" },
+                { status: 404 }
+            );
+        }
+
+        return NextResponse.json({ success: true, deleted: result.rows[0] });
+    } catch (err) {
+        console.error("Error deleting date:", err);
+        return NextResponse.json(
+            { error: "Failed to delete date" },
+            { status: 500 }
+        );
+    }
+}
